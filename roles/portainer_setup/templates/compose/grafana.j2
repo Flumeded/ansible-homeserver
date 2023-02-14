@@ -1,0 +1,31 @@
+version: '3'
+services:
+  grafana:
+    image: grafana/grafana-oss:latest
+    networks:
+      - monitoring
+      - proxy
+    container_name: grafana
+    ports:
+      - "4000:{{ grafana_port }}"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'dockupdater.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'traefik.http.routers.grafana.entrypoints=https'
+      - 'traefik.http.routers.grafana.rule=Host(`{{ grafana_domain }}`)'
+      - 'traefik.http.routers.grafana.tls=true'
+      - 'traefik.http.routers.grafana.service=grafana-svc'
+      - 'traefik.http.services.grafana-svc.loadbalancer.server.port={{ grafana_port }}'
+
+
+networks:
+  monitoring:
+  proxy:
+
+
+volumes:
+    grafana-data:

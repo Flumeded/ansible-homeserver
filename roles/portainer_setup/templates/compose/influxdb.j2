@@ -1,0 +1,18 @@
+version: '3' 
+services:
+  influxdb:
+    restart: unless-stopped
+    container_name: influxdb
+    image: influxdb:2.1-alpine
+    ports:
+      - '{{ influxdb_port }}:{{ influxdb_port }}'
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+
+volumes:
+    influxdb-data:

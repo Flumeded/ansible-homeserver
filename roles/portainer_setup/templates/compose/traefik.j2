@@ -1,0 +1,40 @@
+version: '3'
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - CF_API_EMAIL={{ traefik_cf_email }}  # Cloudflare's account email
+      - CF_DNS_API_TOKEN={{ traefik_cf_token }} # You can also use the API KEY
+      - TZ={{ timezone }}
+      
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=https"
+      - "traefik.http.routers.traefik.rule=Host(`{{ traefik_domain }}`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik.tls.domains[0].main={{ domain }}"
+      - "traefik.http.routers.traefik.tls.domains[0].sans=*.{{ domain }}"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik:/etc/traefik/
+
+volumes:
+  traefik:
+
+networks:
+  proxy:
+  traefik:
+

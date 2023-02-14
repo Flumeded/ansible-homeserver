@@ -1,0 +1,31 @@
+version: '3'
+services:
+  authelia:
+    image: authelia/authelia
+    container_name: authelia
+    volumes:
+      - authelia:/config
+    networks:
+      - proxy
+    labels:
+      - 'traefik.enable=true'
+      - 'dockupdater.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'traefik.http.routers.authelia-rtr.entrypoints=https'
+      - 'traefik.http.routers.authelia-rtr.rule=Host(`{{ authelia_domain }}`)'
+      - 'traefik.http.routers.authelia-rtr.tls=true'
+      - 'traefik.http.routers.authelia-rtr.service=authelia-svc'
+      - 'traefik.http.services.authelia-svc.loadbalancer.server.port={{ authelia_port }}'
+    expose:
+      - {{ authelia_port }}
+    restart: unless-stopped
+    environment:
+      - {{ timezone }}
+    healthcheck:
+      disable: true
+
+networks:
+  proxy:
+
+volumes:
+  authelia:

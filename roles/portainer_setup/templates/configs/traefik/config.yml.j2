@@ -1,0 +1,64 @@
+---
+http:
+  serversTransports:
+    proxmox:
+      serverName: "proxmox.{{ domain }}"
+    portainer:
+      insecureSkipVerify: true
+ #region routers
+  routers:
+    proxmox:
+      entryPoints:
+        - "https"
+      rule: "Host(`{{ proxmox_domain }}`)"
+      middlewares:
+        - authelia
+        - default-headers
+      tls: {}
+      service: proxmox
+
+    portainer:
+      entryPoints:
+        - "https"
+      rule: "Host(`{{ portainer_domain }}`)"
+      middlewares:
+        - authelia
+        - default-headers
+      tls: {}
+      service: portainer
+#endregion
+#region services
+  services:
+    proxmox:
+      loadBalancer:
+        serversTransport: proxmox
+        servers:
+          - url: "https://{{ proxmox_ip }}:{{ proxmox_port }}"
+        passHostHeader: true
+    portainer:
+      loadBalancer:
+        serversTransport: portainer
+        servers:
+          - url: "https://{{ portainer_ip }}:{{ portainer_port }}"
+        passHostHeader: true
+#endregion
+  middlewares:
+    https-redirect:
+      redirectScheme:
+        scheme: https
+    authelia:
+      forwardAuth:
+        address: "http://authelia:{{ authelia_port }}/api/verify?rd=https://{{ authelia_domain }}"
+    default-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https

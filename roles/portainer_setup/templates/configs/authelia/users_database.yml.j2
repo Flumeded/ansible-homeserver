@@ -1,0 +1,14 @@
+---
+{################################################################}
+{#                         Users Database                      ##}
+{################################################################}
+
+users:
+  flume:
+    displayname: "{{ authelia_display_name }}"
+    # Password is Authelia
+    password: "{{ authelia_user_password }}"
+    email: {{ authelia_user_email }}
+    groups:
+      - admins
+      - dev

@@ -1,0 +1,35 @@
+version: '3'
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    labels:
+      - 'traefik.enable=true'
+      - 'dockupdater.enable=true'
+      - 'traefik.http.routers.homeassistant.entrypoints=https'
+      - 'traefik.http.routers.homeassistant.rule=Host(`{{ homeassistant_domain }}`)'
+      - 'traefik.http.routers.homeassistant.tls=true'
+      - 'traefik.http.routers.homeassistant.service=homeassistant-svc'
+      - 'traefik.http.services.homeassistant-svc.loadbalancer.server.port={{ homeassistant_port }}'
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    environment:
+      - {{ timezone }}
+    volumes:
+      - mosquitto:/mosquitto/
+    ports:
+      - 1883:1883
+      - 9001:9001
+
+volumes:
+    homeassistant:
+    mosquitto:

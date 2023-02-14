@@ -1,0 +1,5 @@
+ansible.cfg
+roles/.DS_Store
+roles/portainer_setup/.DS_Store
+.vscode/settings.json
+inventory.ini

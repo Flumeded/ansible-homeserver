@@ -1,0 +1,13 @@
+portainer_stack_list:
+ - adguardhome
+ - authelia
+ - cloudflared
+ - code-server
+ - grafana
+ - homeassistant
+ - influxdb
+ - openbooks
+ - traefik
+ - watchtower
+
+portainer_edition: ee

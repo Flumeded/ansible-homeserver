@@ -1,0 +1,44 @@
+# TODO: Make this task more idempotent and add a handler for a service restart
+- name: Create resolved.conf.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: 0755
+
+- name: Template a systemd configuration
+  ansible.builtin.template:
+    src: templates/configs/adguard/adguard.j2
+    dest: /etc/systemd/resolved.conf.d/adguardhome.conf
+    owner: root
+    group: admin
+    mode: '0644'
+
+- name: Check if resolv.conf exists
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: check_file
+
+- name: Backup original resolf.conf
+  ansible.builtin.copy:
+    src: /etc/resolv.conf
+    dest: /etc/resolv.conf.backup
+    owner: root
+    group: admin
+    mode: '0644'
+  when: check_file.stat.exists
+
+- name: Delete original resolv.conf
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  when: check_file.stat.exists
+
+- name: Link a new resolv.conf instead
+  ansible.builtin.file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+  notify: Restart DNSStubListener
+
+- name: Force handlers activation
+  ansible.builtin.meta: flush_handlers

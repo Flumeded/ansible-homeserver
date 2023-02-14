@@ -1,0 +1,46 @@
+---
+{# Loads default set of integrations. Do not remove.#}
+default_config:
+
+{# Load frontend themes from the themes folder#}
+frontend:
+  themes: !include_dir_merge_named themes
+
+{# Text to speech#}
+tts:
+  - platform: google_translate
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+group: !include groups.yaml
+homeassistant:
+  customize: !include customize.yaml
+
+homekit:
+  - filter:
+      exclude_domains:
+        - device_tracker
+      exclude_entities:
+        - camera.valetudo_differentlimpworm_map_data
+        - sensor.valetudo_differentlimpworm_map_segments
+
+input_boolean:
+  vacuum_hallway:
+    name: Hallway
+    icon: mdi:foot-print
+  vacuum_livingroom:
+    name: Livingroom
+    icon: mdi:sofa
+  vacuum_bedroom:
+    name: Bedroom
+    icon: mdi:bed-empty
+  vacuum_kitchen:
+    name: Kitchen
+    icon: mdi:silverware-fork-knife
+  vacuum_office:
+    name: Office
+    icon: mdi:chair-rolling
+  vacuum_bathroom:
+    name: Bathroom
+    icon: mdi:shower

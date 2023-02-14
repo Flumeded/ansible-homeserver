@@ -1,0 +1,36 @@
+---
+version: "2.1"
+services:
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    networks:
+      - proxy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ={{ timezone }}
+      - PASSWORD={{ code_server_password }}
+      - SUDO_PASSWORD={{ code_server_sudo_password }}
+      - PROXY_DOMAIN={{ code_server_domain }}
+      - DOCKER_MODS=linuxserver/mods:code-server-zsh|flumeded/docker-mod-ansible
+    volumes:
+      - code-server:/config
+    ports:
+      - {{ code_server_port }}:{{ code_server_port }}
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'dockupdater.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'traefik.http.routers.code.entrypoints=https'
+      - 'traefik.http.routers.code.rule=Host(`{{ code_server_domain }}`)'
+      - 'traefik.http.routers.code.tls=true'
+      - 'traefik.http.routers.code.service=code-svc'
+      - 'traefik.http.services.code-svc.loadbalancer.server.port={{ code_server_port }}'
+
+networks:
+  proxy:
+
+volumes:
+  code-server:

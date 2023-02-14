@@ -1,0 +1,31 @@
+---
+- name: Include portainer secrets variables
+  ansible.builtin.include_vars:
+    file: secret.portainer_installation.yml
+
+- name: Check if portainer already exists
+  community.docker.docker_container_info:
+    name: portainer
+  register: container
+
+- name: Check if EE license key is provided and change edition if not
+  ansible.builtin.set_fact:
+    portainer_edition: ce
+  when: portainer_license is not defined
+
+- name: Template a docker-compose file
+  ansible.builtin.template:
+    src: compose/portainer.j2
+    dest: /tmp/docker-compose.yml
+    owner: root
+    group: admin
+    mode: '0644'
+  when: not container.exists
+
+- name: Install portainer trough docker-compose
+  community.docker.docker_compose:
+    project_src: "/tmp"
+    project_name: portainer
+  when: not container.exists
+
+# TODO: Add SSL generation and installation, remove ssl ignore in requests afterwards
