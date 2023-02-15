@@ -1,0 +1,62 @@
+- name: Check if template VM is already existing
+  community.general.proxmox_kvm:
+    api_host: zaken
+    api_user: root@pam
+    api_token_id: "{{ proxmox_token_id }}"
+    api_token_secret: "{{ proxmox_token_secret }}"
+    name: "{{ cloud_init_vm_name }}"
+    node: zaken
+    state: current
+  register: command_result
+  failed_when: "'does not exist in cluster' not in command_result.msg"
+
+
+- name: Download Ubuntu 22 04 cloud image
+  ansible.builtin.get_url:
+    url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+    dest: "/tmp/jammy-server-cloudimg-amd64.img"
+
+- name: Creates a simple VM for ubuntu cloud-init
+  community.general.proxmox_kvm:
+    api_host: zaken
+    api_user: root@pam
+    api_token_id: "{{ proxmox_token_id }}"
+    api_token_secret: "{{ proxmox_token_secret }}"
+    node: zaken
+    name: "{{ cloud_init_vm_name }}"
+    vmid: "{{ cloud_init_vm_id }}"
+    vcpus: 1
+    cores: 2
+    memory: 2048
+
+
+- name: Import the cloned image disk
+  ansible.builtin.shell:
+    cmd: "qm importdisk {{ cloud_init_vm_id }} /tmp/jammy-server-cloudimg-amd64.img local-lvm"
+
+
+- name: Update disk settings
+  community.general.proxmox_kvm:
+    api_host: zaken
+    api_user: root@pam
+    api_token_id: "{{ proxmox_token_id }}"
+    api_token_secret: "{{ proxmox_token_secret }}"
+    node: zaken
+    name: "{{ cloud_init_vm_name }}"
+    vmid: "{{ cloud_init_vm_id }}"
+    update: true 
+    boot: c
+    scsihw: virtio-scsi-pci
+    vga: serial0
+    serial:
+      serial0: socket
+    scsi:
+      scsi0: "local-lvm:vm-{{ cloud_init_vm_id }}-disk-0"
+    net:
+      net0: 'virtio,bridge=vmbr0'
+    ide:
+      ide2: local-lvm:cloudinit
+
+- name: Convert to template
+  ansible.builtin.shell:
+  cmd: "qm template {{ cloud_init_vm_id }}"

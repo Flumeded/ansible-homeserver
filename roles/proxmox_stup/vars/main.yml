@@ -1,0 +1,2 @@
+cloud_init_vm_name: "ubuntu-cloud"
+cloud_init_vm_id: "700"
