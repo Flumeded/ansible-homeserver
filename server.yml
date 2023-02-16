@@ -5,6 +5,7 @@
   vars_files:
     - vars/default.yml
   roles:
-    - role: geerlingguy.pip
-    - role: geerlingguy.docker
-    - role: portainer_setup
+    # - role: geerlingguy.pip
+    # - role: geerlingguy.docker
+    # - role: portainer_setup
+    - role: proxmox_setup

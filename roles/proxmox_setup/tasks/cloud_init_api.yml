@@ -1,0 +1,84 @@
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.token.yml
+
+- name: Get a ticket
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/access/ticket"
+    method: POST
+    return_content: true
+    body_format: form-urlencoded
+    status_code: 200
+    validate_certs: false
+    body:
+      username: "{{ proxmox_username }}"
+      password: "{{ proxmox_password }}"
+  register: proxmox_ticket
+
+- name: Check if cloud init VM exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: vm_create_result
+
+
+- name: Download Ubuntu 22 04 cloud image
+  ansible.builtin.get_url:
+    url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+    dest: "/tmp/jammy-server-cloudimg-amd64.img"
+  when: vm_create_result.status != 200
+
+- name: Create a cloud-init VM
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+    body:
+      node: '{{ proxmox_node }}'
+      vmid: '{{ cloud_init_vm_id }}'
+      name: '{{ cloud_init_vm_name }}'
+      vcpus: '1'
+      cores: '2'
+      memory: '2048'
+      boot: 'c'
+      scsihw: 'virtio-scsi-pci'
+      vga: 'serial0'
+      serial0: 'socket'
+      net0: 'virtio,bridge=vmbro0'
+      ide2: 'local-lvm:cloudinit'
+      scsi0: 'local-lvm:0,import-from=/tmp/jammy-server-cloudimg-amd64.img'
+      # There is some issue with urlencoding in Ansible, so I had to manually encode the key and place it 
+      # as a variable already encoded. Not a big deal? I used https://www.urlencoder.org/
+      sshkeys: '{{ proxmox_ssh_key }}'
+      ciuser: '{{ created_username }}'
+      ipconfig0: ip=dhcp
+  when: vm_create_result.status != 200
+  
+# TODO: Check if it's possible to update the image if VM is already existing
+
+- name: Wait untill creation is complete
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+    method: GET
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+  register: cloud_init_lock
+  until: cloud_init_lock.json.data.lock is not defined
+  retries: 10
+  delay: 30
+  when: vm_create_result.status != 200
+

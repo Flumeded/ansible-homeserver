@@ -1,7 +1,0 @@
----
-- name: removes subscription nag box
-  ansible.builtin.include_tasks: initial_etup.yml
-
-- name: Create an Ubuntu cloud-init template
-  ansible.builtin.include_tasks: cloud_init_vm.yml
-

@@ -1,6 +1,2 @@
 ---
 created_username: flume
-portainer_port: 9493
-portainer_ip: "{{ inventory_hostname }}"
-pip_install_packages:
-  - name: docker-compose
