@@ -32,6 +32,9 @@
   ansible.builtin.get_url:
     url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
     dest: "/tmp/jammy-server-cloudimg-amd64.img"
+    owner: root
+    group: admin
+    mode: '0644'
   when: vm_create_result.status != 200
 
 - name: Create a cloud-init VM
@@ -58,13 +61,13 @@
       net0: 'virtio,bridge=vmbro0'
       ide2: 'local-lvm:cloudinit'
       scsi0: 'local-lvm:0,import-from=/tmp/jammy-server-cloudimg-amd64.img'
-      # There is some issue with urlencoding in Ansible, so I had to manually encode the key and place it 
+      # There is some issue with urlencoding in Ansible, so I had to manually encode the key and place it
       # as a variable already encoded. Not a big deal? I used https://www.urlencoder.org/
       sshkeys: '{{ proxmox_ssh_key }}'
       ciuser: '{{ created_username }}'
       ipconfig0: ip=dhcp
   when: vm_create_result.status != 200
-  
+
 # TODO: Check if it's possible to update the image if VM is already existing
 
 - name: Wait untill creation is complete
@@ -81,4 +84,3 @@
   retries: 10
   delay: 30
   when: vm_create_result.status != 200
-
