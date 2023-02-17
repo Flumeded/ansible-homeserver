@@ -8,5 +8,5 @@
     # - role: geerlingguy.pip
     # - role: geerlingguy.docker
     # - role: portainer_setup
-    # - role: proxmox_setup
+    - role: proxmox_setup
     - role: portainer_vm_deployment

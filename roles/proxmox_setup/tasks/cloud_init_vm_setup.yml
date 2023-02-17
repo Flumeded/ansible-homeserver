@@ -1,6 +1,6 @@
 - name: Include API token
   ansible.builtin.include_vars:
-    file: secret.proxmox.token.yml
+    file: secret.proxmox_token.yml
 
 - name: Get a ticket
   ansible.builtin.uri:
@@ -27,15 +27,25 @@
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
   register: vm_create_result
 
-
 - name: Download Ubuntu 22 04 cloud image
   ansible.builtin.get_url:
     url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
     dest: "/tmp/jammy-server-cloudimg-amd64.img"
     owner: root
-    group: admin
+    group: wheel
     mode: '0644'
   when: vm_create_result.status != 200
+
+- name: Install virt-customize package
+  ansible.builtin.apt:
+    name: libguestfs-tools
+    state: present
+
+- name: Add a qemu agent to the image
+  ansible.builtin.command:
+    cmd: "virt-customize -a /tmp/jammy-server-cloudimg-amd64.img --install qemu-guest-agent"
+  register: command_result
+  changed_when: command_result.rc != 0
 
 - name: Create a cloud-init VM
   ansible.builtin.uri:
