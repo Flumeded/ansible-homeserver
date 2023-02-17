@@ -1,6 +1,6 @@
 - name: Include API token
   ansible.builtin.include_vars:
-    file: secret.token.yml
+    file: secret.proxmox.token.yml
 
 - name: Get a ticket
   ansible.builtin.uri:
