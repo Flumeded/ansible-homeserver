@@ -1,6 +1,6 @@
 - name: Include API token
   ansible.builtin.include_vars:
-    file: secret.proxmox.token.yml
+    file: secret.proxmox_token.yml
 
 - name: Get a ticket
   ansible.builtin.uri:
@@ -15,9 +15,9 @@
       password: "{{ proxmox_password }}"
   register: proxmox_ticket
 
-- name: Check if cloud init VM exists
+- name: Check if portainer  VM exists
   ansible.builtin.uri:
-    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
     method: GET
     status_code: 200, 500
     body_format: form-urlencoded
@@ -38,14 +38,30 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
     body:
+      name: "{{ portainer_vm_name }}"
       newid: "{{ portainer_vm_id }}"
-      full: true
+      full: 1
+  when: vm_create_result.status != 200
+
+- name: Wait untill VM is cloned
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
+    method: GET
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+  register: portainer_vm_status
+  until: portainer_vm_status.json.data.lock is not defined
+  retries: 10
+  delay: 30
   when: vm_create_result.status != 200
 
 - name: Start a portainer VM
   ansible.builtin.uri:
-    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/start"
-    method: GET
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/start"
+    method: POST
     status_code: 200, 500
     body_format: form-urlencoded
     validate_certs: false
