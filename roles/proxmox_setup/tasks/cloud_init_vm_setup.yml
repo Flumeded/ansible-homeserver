@@ -35,6 +35,7 @@
     group: wheel
     mode: '0644'
   when: vm_create_result.status != 200
+  register: cloudinit_image_updated
 
 - name: Install virt-customize package
   ansible.builtin.apt:
@@ -46,6 +47,8 @@
     cmd: "virt-customize -a /tmp/jammy-server-cloudimg-amd64.img --install qemu-guest-agent"
   register: command_result
   changed_when: command_result.rc != 0
+  when: cloudinit_image_updated.changed
+
 
 - name: Create a cloud-init VM
   ansible.builtin.uri:
