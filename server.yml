@@ -1,12 +1,19 @@
 ---
-- name: Main play
-  hosts: portainer
+- name: Proxmox config 
+  hosts: proxmox
   remote_user: root
   vars_files:
     - vars/default.yml
   roles:
-    # - role: geerlingguy.pip
-    # - role: geerlingguy.docker
-    # - role: portainer_setup
-    # - role: proxmox_setup
+    - role: proxmox_setup
     - role: portainer_vm_deployment
+
+- name: Portainer config
+  hosts: portainer
+  become: true
+  vars_files:
+    - vars/default.yml
+  roles:
+    - role: geerlingguy.pip
+    - role: geerlingguy.docker
+    - role: portainer_setup
