@@ -15,48 +15,80 @@
       password: "{{ proxmox_password }}"
   register: proxmox_ticket
 
-# - name: Check if portainer  VM exists
-#   ansible.builtin.uri:
-#     url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
-#     method: GET
-#     status_code: 200, 500
-#     body_format: form-urlencoded
-#     validate_certs: false
-#     headers:
-#       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
-#       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
-#   register: vm_create_result
+- name: Check if portainer  VM exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: vm_create_result
 
-# - name: Clone a cloud-init VM if portainer doesn't exists
-#   ansible.builtin.uri:
-#     url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/clone"
-#     method: POST
-#     status_code: 200
-#     body_format: form-urlencoded
-#     validate_certs: false
-#     headers:
-#       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
-#       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
-#     body:
-#       name: "{{ portainer_vm_name }}"
-#       newid: "{{ portainer_vm_id }}"
-#       full: 1
-#   when: vm_create_result.status != 200
+- name: Clone a cloud-init VM if portainer doesn't exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/clone"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+    body:
+      name: "{{ portainer_vm_name }}"
+      newid: "{{ portainer_vm_id }}"
+      full: 1
+  when: vm_create_result.status != 200
 
-# - name: Wait untill VM is cloned
-#   ansible.builtin.uri:
-#     url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
-#     method: GET
-#     status_code: 200
-#     body_format: form-urlencoded
-#     validate_certs: false
-#     headers:
-#       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
-#   register: portainer_vm_status
-#   until: portainer_vm_status.json.data.lock is not defined
-#   retries: 10
-#   delay: 30
-#   when: vm_create_result.status != 200
+- name: Wait untill VM is cloned
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
+    method: GET
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+  register: portainer_vm_status
+  until: portainer_vm_status.json.data.lock is not defined
+  retries: 10
+  delay: 30
+  when: vm_create_result.status != 200
+
+- name: Change Portainer VM network settings and resources
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/config"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+    body:
+      vcpus: '4'
+      cores: '4'
+      memory: '4000'
+      ipconfig0: 'gw={{ portainer_gateway }},ip={{ portainer_ip_changeto }}/24'
+  when: vm_create_result.status != 200
+
+- name: Increase Portainer VM disk size
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/resize"
+    method: PUT
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+    body:
+      disk: "scsi0"
+      size: "+50G"
+  when: vm_create_result.status != 200
 
 - name: Start a portainer VM
   ansible.builtin.uri:
@@ -87,4 +119,9 @@
 # TODO: Index of the IPv4 is hardcoded, couldn't figure out escaping hyphens
     json_query_var: data.result[?name=='eth0']."ip-addresses"[0]."ip-address"
 
-
+- name: Return a proxmox VM IP
+  ansible.builtin.debug:
+    msg: Portainer IP is "{{ portainer_interface.json | json_query(json_query_var) }}"
+  vars:
+# TODO: Index of the IPv4 is hardcoded, couldn't figure out escaping hyphens
+    json_query_var: data.result[?name=='eth0']."ip-addresses"[0]."ip-address"
