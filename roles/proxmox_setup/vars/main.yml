@@ -1,4 +1,4 @@
-proxmox_node: pve
 proxmox_ip: "{{ inventory_hostname }}"
 cloud_init_vm_name: ubuntu-cloud
 cloud_init_vm_id: "700"
+proxmox_node: zaken
