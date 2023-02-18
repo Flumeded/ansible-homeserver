@@ -7,6 +7,9 @@
 - name: Install EE license
   ansible.builtin.include_tasks: install_license.yml
 
+- name: Create an endpoint
+  ansible.builtin.include_tasks: create_endpoint.yml
+
 - name: Deploy all stacks
   ansible.builtin.include_tasks: deploy_stacks.yml
 

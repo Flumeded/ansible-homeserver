@@ -43,10 +43,11 @@
 
 - name: Deploy all absent stacks
   ansible.builtin.uri:
-    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/stacks?type=2&method=string&endpointId=2"
+    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/stacks?type=2&method=string&endpointId={{ portainer_endpoint_id }}"
     method: POST
     body_format: json
     validate_certs: false
+    timeout: '300'
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
     body:
