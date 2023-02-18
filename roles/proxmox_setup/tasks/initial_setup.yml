@@ -16,4 +16,4 @@
     regexp: 'Ext\.Msg\.show(?=\()'
     replace: "void"
     backup: true
-  notify: restart pveproxy
+  notify: Restart pveproxy
