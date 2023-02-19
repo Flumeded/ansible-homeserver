@@ -12,13 +12,11 @@ entryPoints:
           permanent: true
   https:
     address: ":443"
-  wireguard:
-    address: ":51820/udp"
 certificatesResolvers:
   cloudflare:
     acme:
       email: {{ traefik_cf_email }}
-      storage: letsencrypt/acme.json
+      storage: /etc/traefik/acme.json
       dnsChallenge:
         provider: cloudflare
         resolvers:
@@ -32,4 +30,5 @@ providers:
   file:
     filename: /etc/traefik/config.yml
 log:
-  level: DEBUG
+  level: ERROR
+  filePath: /etc/traefik/logs
