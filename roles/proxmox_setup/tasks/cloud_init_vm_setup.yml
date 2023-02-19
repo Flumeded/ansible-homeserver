@@ -1,6 +1,11 @@
+---
 - name: Include API token
   ansible.builtin.include_vars:
     file: secret.proxmox_token.yml
+
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.user.yml
 
 - name: Get a ticket
   ansible.builtin.uri:
@@ -79,6 +84,7 @@
       # as a variable already encoded. Not a big deal? I used https://www.urlencoder.org/
       sshkeys: '{{ proxmox_ssh_key }}'
       ciuser: '{{ created_username }}'
+      cipassword: '{{ created_username_password }}'
       ipconfig0: ip=dhcp
   when: vm_create_result.status != 200
 
