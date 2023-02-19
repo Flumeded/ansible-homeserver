@@ -2,7 +2,7 @@ version: "3"
 services: 
   portainer:
     container_name: portainer
-    image: portainer/portainer-{{ portainer_edition }}:latest
+    image: portainer/portainer-{{ portainer_edition }}:2.16.1
     ports:
       - {{ portainer_port }}:{{ portainer_port }}
     volumes:
