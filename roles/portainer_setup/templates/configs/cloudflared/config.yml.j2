@@ -1,0 +1,12 @@
+---
+tunnel: {{ tunnel_id }}
+#Optional
+credentials-file: /home/nonroot/.cloudflared/tunnelid.json
+warp-routing:
+  enabled: true
+ingress:
+  - hostname: '*.{{ domain }}'
+    service: https://{{ portainer_ip }}
+    originRequest:
+      noTLSVerify: true
+  - service: http_status:404
