@@ -11,6 +11,9 @@
 - name: Portainer config
   hosts: portainer
   become: true
+  vars:
+# Ignoring host-key trust prompt
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no
   vars_files:
     - vars/default.yml
   roles:
