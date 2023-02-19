@@ -1,17 +1,16 @@
 ---
-{################################################################}
-{#                   Authelia configuration                    ##}
-{################################################################}
-
+{# ############################################################## #}
+{#                   Authelia configuration                     # #}
+{# ############################################################## #}
 server:
   host: 0.0.0.0
   port: {{ authelia_port }}
 log:
   level: debug
 theme: dark
-{# This secret can also be set using the env variables AUTHELIA_JWT_SECRET_FILE#}
+{# This secret can also be set using the env variables AUTHELIA_JWT_SECRET_FILE #}
 jwt_secret: {{ authelia_jwt_key }}
-default_redirection_url: {{ authelia_domain }}
+default_redirection_url: https://{{ authelia_domain }}
 totp:
   issuer: authelia.com
 
@@ -30,7 +29,7 @@ access_control:
 
 session:
   name: authelia_session
-  {# This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE#}
+{# This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE #}
   secret: unsecure_session_secret
   expiration: 3600  # 1 hour
   inactivity: 300  # 5 minutes
@@ -46,6 +45,6 @@ storage:
   local:
     path: /config/db.sqlite3
 
-
+notifier:
   filesystem:
     filename: /config/notification.txt
