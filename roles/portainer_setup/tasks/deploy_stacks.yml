@@ -39,8 +39,6 @@
   ansible.builtin.wait_for:
     timeout: 10
 
-# TODO: Add an endpoint ID fetch - check - store
-
 - name: Deploy all absent stacks
   ansible.builtin.uri:
     url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/stacks?type=2&method=string&endpointId={{ portainer_endpoint_id }}"
