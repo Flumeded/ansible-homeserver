@@ -5,14 +5,15 @@ services:
     container_name: influxdb
     image: influxdb:2.1-alpine
     ports:
-      - '{{ influxdb_port }}:{{ influxdb_port }}'
+      - {{ influxdb_port }}:{{ influxdb_port }}
     volumes:
-      - influxdb-data:/var/lib/influxdb2
+      - influxdb:/var/lib/influxdb2
     networks:
       - monitoring
 
 networks:
   monitoring:
+    external: true
 
 volumes:
-    influxdb-data:
+    influxdb:

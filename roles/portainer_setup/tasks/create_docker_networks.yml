@@ -1,0 +1,8 @@
+
+- name: Create Reverse Proxy network
+  community.docker.docker_network:
+    name: proxy
+
+- name: Create Monitoring network
+  community.docker.docker_network:
+    name: monitoring

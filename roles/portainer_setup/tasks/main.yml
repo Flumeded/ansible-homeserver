@@ -1,3 +1,4 @@
+---
 - name: Configure the portainer
   ansible.builtin.include_tasks: installation.yml
 
@@ -9,6 +10,9 @@
 
 - name: Create an endpoint
   ansible.builtin.include_tasks: create_endpoint.yml
+
+- name: Create required docker networks
+  ansible.builtin.include_tasks: create_docker_networks.yml
 
 - name: Deploy all stacks
   ansible.builtin.include_tasks: deploy_stacks.yml
