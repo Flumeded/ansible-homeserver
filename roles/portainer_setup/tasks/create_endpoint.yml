@@ -40,4 +40,5 @@
       Name: 'production'
       EndpointCreationType: '1'
       GroupID: '1'
+      PublicURL: "{{ portainer_ip}}"
   when: endpoint_exists.status == 404
