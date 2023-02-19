@@ -2,3 +2,4 @@ portainer_vm_id: "200"
 cloud_init_vm_id: "700"
 portainer_gateway: "192.168.31.1"
 portainer_ip_changeto: "192.168.31.59"
+proxmox_node: zaken
