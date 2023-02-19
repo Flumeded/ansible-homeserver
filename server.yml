@@ -1,5 +1,5 @@
 ---
-- name: Proxmox config 
+- name: Proxmox config
   hosts: proxmox
   remote_user: root
   vars_files:
