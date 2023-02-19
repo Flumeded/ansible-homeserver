@@ -69,9 +69,9 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
     body:
-      vcpus: '4'
-      cores: '4'
-      memory: '4000'
+      vcpus: '3'
+      cores: '3'
+      memory: '6000'
       ipconfig0: 'gw={{ portainer_gateway }},ip={{ portainer_ip_changeto }}/24'
   when: vm_create_result.status != 200
 
@@ -116,12 +116,20 @@
   retries: 15
   delay: 20
   vars:
-# TODO: Index of the IPv4 is hardcoded, couldn't figure out escaping hyphens
+# TODO: Index of the IPv4 is hardcoded here, couldn't figure out escaping hyphens
     json_query_var: data.result[?name=='eth0']."ip-addresses"[0]."ip-address"
+
+- name: Wait for SSH service to start
+  ansible.builtin.wait_for:
+    host: "{{ portainer_interface.json | json_query(json_query_var) }}"
+    port: 22
+  vars:
+# TODO: Index of the IPv4 is hardcoded here, couldn't figure out escaping hyphens
+    json_query_var: data.result[?name=='eth0']."ip-addresses"[0]."ip-address" | [0]
 
 - name: Return a proxmox VM IP
   ansible.builtin.debug:
-    msg: Portainer IP is "{{ portainer_interface.json | json_query(json_query_var) }}"
+    msg: "{{ portainer_interface.json | json_query(json_query_var) }}"
   vars:
-# TODO: Index of the IPv4 is hardcoded, couldn't figure out escaping hyphens
-    json_query_var: data.result[?name=='eth0']."ip-addresses"[0]."ip-address"
+# TODO: Index of the IPv4 is hardcoded here, couldn't figure out escaping hyphens
+    json_query_var: data.result[?name=='eth0']."ip-addresses"[0]."ip-address" | [0]
