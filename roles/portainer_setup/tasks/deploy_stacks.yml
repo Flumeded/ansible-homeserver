@@ -32,12 +32,12 @@
 
 - name: Disable systemd resolver (if necessary)
   ansible.builtin.include_tasks: disable_systemd_resolver.yml
-  when: "'adguardhome' in portainer_stack_list"
+  when: "'adguardhome' in portainer_stack_list.keys()"
 
 # TODO: Seems without proper waiting it won't connect normally. Refactor to service wait?
 - name: Wait for service to start
   ansible.builtin.wait_for:
-    timeout: 10
+    timeout: 3
 
 - name: Deploy all absent stacks
   ansible.builtin.uri:
@@ -51,5 +51,8 @@
     body:
       name: "{{ item }}"
       stackFileContent: "{{ lookup('template', 'roles/portainer_setup/templates/compose/{{ item }}.j2') }}"
-  loop: "{{ portainer_stack_list }}"
+  loop: "{{ portainer_stack_list.keys() }}"
   when: "item not in content.json | json_query('[*].Name')"
+
+# - debug:
+#     msg: "{{ portainer_stack_list.keys() }}"

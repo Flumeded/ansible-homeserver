@@ -1,0 +1,59 @@
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.user.yml
+
+- name: Check if private key already exists
+  ansible.builtin.file:
+    path: ./media/certs/private.key
+  register: private_key
+  ignore_errors: true
+  become: true
+  connection: local
+
+- name: Check if CA certificate already exists
+  ansible.builtin.file:
+    path: ./media/certs/ca-certificate.pem
+  ignore_errors: true
+  register: ca_certificate
+  become: true
+  connection: local
+
+- debug:
+    msg: "{{ private_key }}"
+
+- name: Create private key with password protection
+  community.crypto.openssl_privatekey:
+    path: ./media/certs/private.key
+    passphrase: "{{ ca_passphrase }}"
+    cipher: 'auto'
+  become: true
+  connection: local
+  when: private_key.state == 'absent'
+
+- name: Create certificate signing request (CSR) for CA certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: ./meia/certs/ca-certificate.key
+    privatekey_passphrase: "{{ ca_passphrase }}"
+    common_name: Ansible CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: ca_csr
+  become: true
+  connection: local
+  when: ca_certificate.stat.exists == False
+
+- name: Create self-signed CA certificate from CSR
+  community.crypto.x509_certificate:
+    path: /path/to/ca-certificate.pem
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: ./media/cert/ca-certificate.key
+    privatekey_passphrase: "{{ secret_ca_passphrase }}"
+    provider: selfsigned
+  become: true
+  connection: local
+  when: ca_certificate.stat.exists == False
