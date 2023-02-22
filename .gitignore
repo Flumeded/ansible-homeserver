@@ -4,3 +4,4 @@ roles/portainer_setup/.DS_Store
 .vscode/settings.json
 inventory.yml
 vars/ssh/
+media/certs/*

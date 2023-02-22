@@ -2,58 +2,78 @@
   ansible.builtin.include_vars:
     file: secret.user.yml
 
-- name: Check if private key already exists
-  ansible.builtin.file:
-    path: ./media/certs/private.key
-  register: private_key
-  ignore_errors: true
-  become: true
-  connection: local
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.compose_settings.yml
 
-- name: Check if CA certificate already exists
-  ansible.builtin.file:
-    path: ./media/certs/ca-certificate.pem
-  ignore_errors: true
-  register: ca_certificate
-  become: true
-  connection: local
-
-- debug:
-    msg: "{{ private_key }}"
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.configs.yml
 
 - name: Create private key with password protection
   community.crypto.openssl_privatekey:
-    path: ./media/certs/private.key
+    path: ./media/certs/ca-private.key
     passphrase: "{{ ca_passphrase }}"
-    cipher: 'auto'
-  become: true
+    cipher: auto
+  become_user: "{{ created_username }}"
   connection: local
-  when: private_key.state == 'absent'
 
 - name: Create certificate signing request (CSR) for CA certificate
   community.crypto.openssl_csr_pipe:
-    privatekey_path: ./meia/certs/ca-certificate.key
+    privatekey_path: ./media/certs/ca-private.key
     privatekey_passphrase: "{{ ca_passphrase }}"
     common_name: Ansible CA
     use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
     basic_constraints:
       - 'CA:TRUE'
+    country_name: AM
+    organization_name: flume
     basic_constraints_critical: true
     key_usage:
       - keyCertSign
     key_usage_critical: true
   register: ca_csr
-  become: true
+  become_user: "{{ created_username }}"
   connection: local
-  when: ca_certificate.stat.exists == False
 
 - name: Create self-signed CA certificate from CSR
   community.crypto.x509_certificate:
-    path: /path/to/ca-certificate.pem
+    path: ./media/certs/ca-certificate.pem
     csr_content: "{{ ca_csr.csr }}"
-    privatekey_path: ./media/cert/ca-certificate.key
-    privatekey_passphrase: "{{ secret_ca_passphrase }}"
+    privatekey_path: ./media/certs/ca-private.key
+    privatekey_passphrase: "{{ ca_passphrase }}"
     provider: selfsigned
-  become: true
+  become_user: "{{ created_username }}"
   connection: local
-  when: ca_certificate.stat.exists == False
+
+- name: Create private key with password protection for a Portainer
+  community.crypto.openssl_privatekey:
+    path: ./media/certs/portainer-private.key
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create certificate signing request (CSR) for new certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: ./media/certs/portainer-private.key
+    subject_alt_name_critical: true
+    subject_alt_name:
+      - "DNS:{{ portainer_domain }}"
+      - "IP:{{ portainer_ip }}"
+  connection: local
+  become_user: "{{ created_username }}"
+  register: csr
+
+- name: Sign certificate with our CA
+  community.crypto.x509_certificate:
+    path: ./media/certs/portainer-certificate.pem
+    csr_content: "{{ csr.csr }}"
+    provider: ownca
+    ownca_path: ./media/certs/ca-certificate.pem
+    ownca_privatekey_path: ./media/certs/ca-private.key
+    ownca_privatekey_passphrase: "{{ ca_passphrase }}"
+    ownca_not_after: +365d  # valid for one year
+    ownca_not_before: "-1d"  # valid since yesterday
+  connection: local
+  become_user: "{{ created_username }}"
+  run_once: true
+  register: certificate
