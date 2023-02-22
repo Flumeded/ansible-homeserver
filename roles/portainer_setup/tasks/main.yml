@@ -1,24 +1,29 @@
-# ---
-# - name: Configure the portainer
-#   ansible.builtin.include_tasks: installation.yml
-
-# - name: Configure the root user
-#   ansible.builtin.include_tasks: create_user.yml
-
-# - name: Install EE license
-#   ansible.builtin.include_tasks: install_license.yml
-
-# - name: Create an endpoint
-#   ansible.builtin.include_tasks: create_endpoint.yml
-
-# - name: Create required docker networks
-#   ansible.builtin.include_tasks: create_docker_networks.yml
-
-# - name: Deploy all stacks
-#   ansible.builtin.include_tasks: deploy_stacks.yml
-
-# - name: Copy config files for stacks
-#   ansible.builtin.include_tasks: populate_configs.yml
-
+---
 - name: Generate SSL Certs
   ansible.builtin.include_tasks: ssl_generation.yml
+
+- name: Configure the portainer
+  ansible.builtin.include_tasks: installation.yml
+
+- name: Configure the root user
+  ansible.builtin.include_tasks: create_user.yml
+
+- name: Install EE license
+  ansible.builtin.include_tasks: install_license.yml
+
+- name: Generate SSL Certs
+  ansible.builtin.include_tasks: install_ssl.yml
+
+- name: Create an endpoint
+  ansible.builtin.include_tasks: create_endpoint.yml
+
+- name: Create required docker networks
+  ansible.builtin.include_tasks: create_docker_networks.yml
+
+- name: Deploy all stacks
+  ansible.builtin.include_tasks: deploy_stacks.yml
+
+- name: Copy config files for stacks
+  ansible.builtin.include_tasks: populate_configs.yml
+
+

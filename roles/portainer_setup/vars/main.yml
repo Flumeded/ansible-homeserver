@@ -1,18 +1,16 @@
 portainer_stack_list:
-  adguardhome:
+  - Container: adguardhome
     TLS: true
-  authelia:
-  cloudflared:
-  code-server:
-  grafana:
+  - Container: authelia
+  - Container: cloudflared
+  - Container: code-server
+  - Container: grafana
     TLS: true
-  homeassistant:
+  - Container: influxdb
     TLS: true
-  influxdb:
-    TLS: true
-  openbooks:
-  traefik:
-  watchtower:
+  - Container: openbooks
+  - Container: traefik
+  - Container: watchtower
 
 portainer_edition: ee
 portainer_ip: "{{ inventory_hostname }}"

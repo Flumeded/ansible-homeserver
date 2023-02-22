@@ -46,27 +46,31 @@
   become_user: "{{ created_username }}"
   connection: local
 
-- name: Create private key with password protection for a Portainer
+- name: Create private key with password protection for a container
   community.crypto.openssl_privatekey:
-    path: ./media/certs/portainer-private.key
+    path: ./media/certs/{{ item.Container }}-private.key
   become_user: "{{ created_username }}"
   connection: local
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
 
 - name: Create certificate signing request (CSR) for new certificate
-  community.crypto.openssl_csr_pipe:
-    privatekey_path: ./media/certs/portainer-private.key
+  community.crypto.openssl_csr:
+    path: ./media/certs/{{ item.Container }}.csr
+    privatekey_path: ./media/certs/{{ item.Container }}-private.key
     subject_alt_name_critical: true
     subject_alt_name:
-      - "DNS:{{ portainer_domain }}"
+      - "DNS:{{ lookup('ansible.builtin.vars', item.Container + '_domain') }}"
       - "IP:{{ portainer_ip }}"
   connection: local
   become_user: "{{ created_username }}"
-  register: csr
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
 
 - name: Sign certificate with our CA
   community.crypto.x509_certificate:
-    path: ./media/certs/portainer-certificate.pem
-    csr_content: "{{ csr.csr }}"
+    path: ./media/certs/{{ item.Container }}-certificate.pem
+    csr_path: ./media/certs/{{ item.Container }}.csr
     provider: ownca
     ownca_path: ./media/certs/ca-certificate.pem
     ownca_privatekey_path: ./media/certs/ca-private.key
@@ -77,3 +81,15 @@
   become_user: "{{ created_username }}"
   run_once: true
   register: certificate
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
+
+- name: Cleanup CSRs
+  ansible.builtin.file:
+    path: ./media/certs/{{ item.Container }}.csr
+    state: absent
+  connection: local
+  become_user: "{{ created_username }}"
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
+
