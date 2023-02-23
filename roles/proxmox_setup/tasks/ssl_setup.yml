@@ -1,0 +1,118 @@
+---
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.proxmox_token.yml
+
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.user.yml
+
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: roles/portainer_setup/vars/secret.compose_settings.yml
+
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: roles/portainer_setup/vars/secret.configs.yml
+
+- name: Get a ticket
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/access/ticket"
+    method: POST
+    return_content: true
+    body_format: form-urlencoded
+    status_code: 200
+    validate_certs: false
+    body:
+      username: "{{ proxmox_username }}"
+      password: "{{ proxmox_password }}"
+  register: proxmox_ticket
+
+
+- name: Create private key with password protection
+  community.crypto.openssl_privatekey:
+    path: ./media/certs/ca-private.key
+    passphrase: "{{ ca_passphrase }}"
+    cipher: auto
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create certificate signing request (CSR) for CA certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: ./media/certs/ca-private.key
+    privatekey_passphrase: "{{ ca_passphrase }}"
+    common_name: Ansible CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    country_name: AM
+    organization_name: flume
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: ca_csr
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create self-signed CA certificate from CSR
+  community.crypto.x509_certificate:
+    path: ./media/certs/ca-certificate.pem
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: ./media/certs/ca-private.key
+    privatekey_passphrase: "{{ ca_passphrase }}"
+    provider: selfsigned
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create a private key for a Proxmox
+  community.crypto.openssl_privatekey:
+    path: ./media/certs/proxmox-private.key
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create certificate signing request (CSR) for new certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: ./media/certs/portainer-private.key
+    subject_alt_name_critical: true
+    subject_alt_name:
+      - "DNS:{{ proxmox_domain }}"
+      - "IP:{{ proxmox_ip }}"
+    subject:
+      CN: www.ansible.com 
+      O: Ansible
+  connection: local
+  become_user: "{{ created_username }}"
+  register: csr
+
+- name: Sign certificate with our CA
+  community.crypto.x509_certificate:
+    path: ./media/certs/proxmox-certificate.pem
+    csr_content: "{{ csr.csr }}"
+    provider: ownca
+    ownca_path: ./media/certs/ca-certificate.pem
+    ownca_privatekey_path: ./media/certs/ca-private.key
+    ownca_privatekey_passphrase: "{{ ca_passphrase }}"
+    ownca_not_after: +365d  # valid for one year
+    ownca_not_before: "-1d"  # valid since yesterday
+  connection: local
+  become_user: "{{ created_username }}"
+  run_once: true
+  register: certificate
+
+- name: Upload a certificate
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/certificates/custom"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+    body:
+      certificates: "{{ lookup('file', './media/certs/proxmox-certificate.pem') }}"
+      key: "{{ lookup('file', './media/certs/proxmox-private.key') }}"
+      restart: 1
+  connection: local
+  become_user: "{{ created_username }}"

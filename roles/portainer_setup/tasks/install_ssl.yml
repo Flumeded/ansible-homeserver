@@ -37,8 +37,8 @@
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
     body:
       cert: "{{ lookup('file', './media/certs/portainer-certificate.pem') }}"
-      "httpenabled": false
       key: "{{ lookup('file', './media/certs/portainer-private.key') }}"
+      httpenabled: false
   when: cert.stat.exists == True
   connection: local
   become_user: "{{ created_username }}"
