@@ -11,6 +11,10 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     restart: unless-stopped
+    environment:
+      - GF_SERVER_PROTOCOL=https
+      - GF_SERVER_CERT_FILE=/var/lib/grafana/grafana-certificate.pem
+      - GF_SERVER_CERT_KEY=/var/lib/grafana/grafana-private.key
     labels:
       - 'traefik.enable=true'
       - 'dockupdater.enable=true'
@@ -19,7 +23,10 @@ services:
       - 'traefik.http.routers.grafana.rule=Host(`{{ grafana_domain }}`)'
       - 'traefik.http.routers.grafana.tls=true'
       - 'traefik.http.routers.grafana.service=grafana-svc'
+      - 'traefik.http.services.grafana-svc.loadbalancer.server.scheme=https'
+      - "traefik.http.services.grafana-svc.loadbalancer.serversTransport=grafana@file"
       - 'traefik.http.services.grafana-svc.loadbalancer.server.port={{ grafana_port }}'
+
 
 
 networks:

@@ -1,4 +1,4 @@
----
+# ---
 # - name: Proxmox config
 #   hosts: proxmox
 #   remote_user: root
@@ -6,7 +6,7 @@
 #     - vars/default.yml
 #   roles:
 #     - role: proxmox_setup
-#     - role: portainer_vm_deployment
+#     # - role: portainer_vm_deployment
 
 - name: Portainer config
   hosts: portainer

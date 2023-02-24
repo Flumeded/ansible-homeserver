@@ -5,3 +5,5 @@ roles/portainer_setup/.DS_Store
 inventory.yml
 vars/ssh/
 media/certs/*
+roles/portainer_setup/templates/configs/**/*.pem
+roles/portainer_setup/templates/configs/**/*.key
