@@ -92,3 +92,10 @@
   become_user: "{{ created_username }}"
   loop: "{{ portainer_stack_list }}"
   when: "item.TLS is true"
+
+- name: Copy CA to the Traefik
+  ansible.builtin.copy:
+    src: ./media/certs/ca-certificate.pem
+    dest: roles/portainer_setup/templates/configs/traefik/ca-certificate.pem
+  connection: local
+  become_user: "{{ created_username }}"
