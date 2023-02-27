@@ -4,11 +4,17 @@
 {# ############################################################## #}
 
 users:
-  flume:
-    displayname: "{{ authelia_display_name }}"
-    # Password is Authelia
-    password: "{{ authelia_user_password }}"
-    email: {{ authelia_user_email }}
+  {{ authelia_user1 }}:
+    displayname: "{{ authelia_display_name_user1 }}"
+    password: "{{ authelia_user_password_user1 }}"
+    email: {{ authelia_user_email_user1 }}
+    groups:
+      - admins
+      - dev
+  {{ authelia_user2 }}:
+    displayname: "{{ authelia_display_name_user2}}"
+    password: "{{ authelia_user_password_user2 }}"
+    email: {{ authelia_user_email_user2 }}
     groups:
       - admins
       - dev

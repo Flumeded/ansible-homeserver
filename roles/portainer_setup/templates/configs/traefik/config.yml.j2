@@ -28,6 +28,16 @@ http:
         - default-headers
       tls: {}
       service: portainer
+
+    valetudo:
+      entryPoints:
+        - "https"
+      rule: "Host(`vacuum.{{ domain }}`)"
+      middlewares:
+        - authelia
+      tls: {}
+      service: valetudo
+
 #endregion
 #region services
   services:
@@ -43,6 +53,10 @@ http:
         servers:
           - url: "https://{{ portainer_ip }}:{{ portainer_port }}"
         passHostHeader: true
+    valetudo:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.31.202"
 #endregion
   middlewares:
     https-redirect:
