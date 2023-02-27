@@ -10,6 +10,9 @@ services:
       - influxdb:/var/lib/influxdb2
     networks:
       - monitoring
+    environment:
+      - INFLUXD_TLS_CERT=/var/lib/influxdb2/influxdb-certificate.pem
+      - INFLUXD_TLS_KEY=/var/lib/influxdb2/influxdb-private.key
 
 networks:
   monitoring:

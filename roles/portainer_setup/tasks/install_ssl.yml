@@ -1,0 +1,44 @@
+---
+- name: Include portainer secrets variables
+  ansible.builtin.include_vars:
+    file: secret.portainer_installation.yml
+
+
+
+# TODO: Refactor so token gets pulled only when it's absent
+- name: Get a token if needed
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/auth"
+    method: POST
+    return_content: true
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    body:
+      Username: "{{ portainer_username }}"
+      Password: "{{ portainer_password }}"
+  register: auth_token
+
+- name: Check if portainer ssl-cert exists
+  ansible.builtin.stat:
+    path: ./media/certs/portainer-certificate.pem
+  register: cert
+  connection: local
+  become_user: "{{ created_username }}"
+
+- name: Install SSL cert
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/ssl"
+    method: PUT
+    status_code: 204
+    body_format: json
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+    body:
+      cert: "{{ lookup('file', './media/certs/portainer-certificate.pem') }}"
+      key: "{{ lookup('file', './media/certs/portainer-private.key') }}"
+      httpenabled: false
+  when: cert.stat.exists == True
+  connection: local
+  become_user: "{{ created_username }}"

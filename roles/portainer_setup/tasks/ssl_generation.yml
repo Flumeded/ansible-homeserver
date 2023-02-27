@@ -1,0 +1,101 @@
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.user.yml
+
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.compose_settings.yml
+
+- name: Include API token
+  ansible.builtin.include_vars:
+    file: secret.configs.yml
+
+- name: Create private key with password protection
+  community.crypto.openssl_privatekey:
+    path: ./media/certs/ca-private.key
+    passphrase: "{{ ca_passphrase }}"
+    cipher: auto
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create certificate signing request (CSR) for CA certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: ./media/certs/ca-private.key
+    privatekey_passphrase: "{{ ca_passphrase }}"
+    common_name: Ansible CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    country_name: AM
+    organization_name: flume
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: ca_csr
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create self-signed CA certificate from CSR
+  community.crypto.x509_certificate:
+    path: ./media/certs/ca-certificate.pem
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: ./media/certs/ca-private.key
+    privatekey_passphrase: "{{ ca_passphrase }}"
+    provider: selfsigned
+  become_user: "{{ created_username }}"
+  connection: local
+
+- name: Create private key with password protection for a container
+  community.crypto.openssl_privatekey:
+    path: roles/portainer_setup/templates/configs/{{ item.Container }}/{{ item.Container }}-private.key
+  become_user: "{{ created_username }}"
+  connection: local
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
+
+- name: Create certificate signing request (CSR) for new certificate
+  community.crypto.openssl_csr:
+    path: roles/portainer_setup/templates/configs/{{ item.Container }}/{{ item.Container }}.csr
+    privatekey_path: roles/portainer_setup/templates/configs/{{ item.Container }}/{{ item.Container }}-private.key
+    subject_alt_name_critical: true
+    subject_alt_name:
+      - "DNS:{{ lookup('ansible.builtin.vars', item.Container + '_domain') }}"
+      - "IP:{{ portainer_ip }}"
+  connection: local
+  become_user: "{{ created_username }}"
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
+
+- name: Sign certificate with our CA
+  community.crypto.x509_certificate:
+    path: roles/portainer_setup/templates/configs/{{ item.Container }}/{{ item.Container }}-certificate.pem
+    csr_path: roles/portainer_setup/templates/configs/{{ item.Container }}/{{ item.Container }}.csr
+    provider: ownca
+    ownca_path: ./media/certs/ca-certificate.pem
+    ownca_privatekey_path: ./media/certs/ca-private.key
+    ownca_privatekey_passphrase: "{{ ca_passphrase }}"
+    ownca_not_after: +365d  # valid for one year
+    ownca_not_before: "-1d"  # valid since yesterday
+  connection: local
+  become_user: "{{ created_username }}"
+  run_once: true
+  register: certificate
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
+
+- name: Cleanup CSRs
+  ansible.builtin.file:
+    path: roles/portainer_setup/templates/configs/{{ item.Container }}/{{ item.Container }}.csr
+    state: absent
+  connection: local
+  become_user: "{{ created_username }}"
+  loop: "{{ portainer_stack_list }}"
+  when: "item.TLS is true"
+
+- name: Copy CA to the Traefik
+  ansible.builtin.copy:
+    src: ./media/certs/ca-certificate.pem
+    dest: roles/portainer_setup/templates/configs/traefik/ca-certificate.pem
+  connection: local
+  become_user: "{{ created_username }}"

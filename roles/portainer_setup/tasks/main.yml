@@ -1,4 +1,7 @@
 ---
+- name: Generate SSL Certs
+  ansible.builtin.include_tasks: ssl_generation.yml
+
 - name: Configure the portainer
   ansible.builtin.include_tasks: installation.yml
 
@@ -7,6 +10,9 @@
 
 - name: Install EE license
   ansible.builtin.include_tasks: install_license.yml
+
+- name: Generate SSL Certs
+  ansible.builtin.include_tasks: install_ssl.yml
 
 - name: Create an endpoint
   ansible.builtin.include_tasks: create_endpoint.yml
@@ -19,3 +25,5 @@
 
 - name: Copy config files for stacks
   ansible.builtin.include_tasks: populate_configs.yml
+
+
