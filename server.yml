@@ -5,19 +5,18 @@
   vars_files:
     - vars/default.yml
   roles:
-    # - role: proxmox_setup
-    # - role: portainer_setup
-    - role: HAOS_setup
+    - role: proxmox_setup
+    - role: haos_setup
 
-# - name: Portainer config
-#   hosts: portainer
-#   become: true
-#   vars:
-# # Ignoring host-key trust prompt
-#     ansible_ssh_common_args: -o StrictHostKeyChecking=no
-#   vars_files:
-#     - vars/default.yml
-#   roles:
-#     # - role: geerlingguy.pip
-#     # - role: geerlingguy.docker
-#     - role: HAOS_setup
+- name: Portainer config
+  hosts: portainer
+  become: true
+  vars:
+# Ignoring host-key trust prompt
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no
+  vars_files:
+    - vars/default.yml
+  roles:
+    - role: geerlingguy.pip
+    - role: geerlingguy.docker
+    - role: portainer_setup

@@ -86,4 +86,5 @@
     src: ./media/certs/ca-certificate.pem
     dest: roles/portainer_setup/templates/configs/traefik/ca-certificate.pem
   connection: local
+  mode: "0400"
   become_user: "{{ created_username }}"

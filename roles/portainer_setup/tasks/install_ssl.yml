@@ -33,6 +33,6 @@
       cert: "{{ lookup('file', './media/certs/portainer-certificate.pem') }}"
       key: "{{ lookup('file', './media/certs/portainer-private.key') }}"
       httpenabled: false
-  when: cert.stat.exists == True
+  when: cert.stat.exists
   connection: local
   become_user: "{{ created_username }}"

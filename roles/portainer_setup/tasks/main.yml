@@ -28,5 +28,3 @@
 
 - name: Copy config files for stacks
   ansible.builtin.include_tasks: populate_configs.yml
-
-

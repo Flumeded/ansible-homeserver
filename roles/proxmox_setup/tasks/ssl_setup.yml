@@ -71,7 +71,7 @@
       - "DNS:{{ proxmox_domain }}"
       - "IP:{{ proxmox_ip }}"
     subject:
-      CN: www.ansible.com 
+      CN: www.ansible.com
       O: Ansible
   connection: local
   become_user: "{{ created_username }}"

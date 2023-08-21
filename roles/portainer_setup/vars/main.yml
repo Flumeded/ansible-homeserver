@@ -17,4 +17,4 @@ portainer_ip: "{{ inventory_hostname }}"
 portainer_port: 9493
 portainer_endpoint_id: "1"
 pip_install_packages:
- - name: docker-compose
+  - name: docker-compose

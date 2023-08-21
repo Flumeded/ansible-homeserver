@@ -48,10 +48,6 @@ influxdb_port: 8086
 influxdb_domain: influxdb.{{ domain }}
   ### Open Books ###
 
-  ### Portainer ###
-portainer_port: 9443
-
-
   ### Traefik ###
 traefik_domain: traefik.{{ domain }}
 traefik_cf_email: !vault |
@@ -231,4 +227,3 @@ portainer_license: !vault |
           38396337633434626665373366656630313865303362336338313961343166383433646266343366
           33393036663735376136316266636335386333666663363436356564313061653462623061383831
           3130
-

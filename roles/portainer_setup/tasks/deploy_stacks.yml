@@ -46,6 +46,3 @@
       stackFileContent: "{{ lookup('template', 'roles/portainer_setup/templates/compose/{{ item.Container }}.j2') }}"
   loop: "{{ portainer_stack_list }}"
   when: "item.Container not in content.json | json_query('[*].Name')"
-
-# - debug:
-#     msg: "{{ portainer_stack_list.keys() }}"
