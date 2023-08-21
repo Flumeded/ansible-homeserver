@@ -1,8 +1,4 @@
 ---
-- name: Include portainer secrets variables
-  ansible.builtin.include_vars:
-    file: secret.portainer_installation.yml
-
 - name: Portainer takes a moment to start, waiting
   ansible.builtin.wait_for:
     port: "{{ portainer_port }}"

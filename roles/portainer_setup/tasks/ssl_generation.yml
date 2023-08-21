@@ -1,15 +1,3 @@
-- name: Include API token
-  ansible.builtin.include_vars:
-    file: secret.user.yml
-
-- name: Include API token
-  ansible.builtin.include_vars:
-    file: secret.compose_settings.yml
-
-- name: Include API token
-  ansible.builtin.include_vars:
-    file: secret.configs.yml
-
 - name: Create private key with password protection
   community.crypto.openssl_privatekey:
     path: ./media/certs/ca-private.key

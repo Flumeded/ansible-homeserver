@@ -1,11 +1,3 @@
-- name: Include stacks secrets variables
-  ansible.builtin.include_vars:
-    file: secret.compose_settings.yml
-
-- name: Include stacks secrets variables
-  ansible.builtin.include_vars:
-    file: secret.portainer_installation.yml
-
 # TODO: Refactor so token gets pulled only when it's absent
 - name: Get a token if needed
   ansible.builtin.uri:

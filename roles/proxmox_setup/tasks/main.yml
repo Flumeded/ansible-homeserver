@@ -1,9 +1,15 @@
 ---
-# - name: Removes subscription nag box
-#   ansible.builtin.include_tasks: initial_setup.yml
+- name: Include Proxmox Credentials for API usage
+  ansible.builtin.include_vars: secret.proxmox_token.yml
 
-- name: Create and install certificate
-  ansible.builtin.include_tasks: ssl_setup.yml
+- name: Removes subscription nag box
+  ansible.builtin.include_tasks: initial_setup.yml
 
-# - name: Create an Ubuntu cloud-init template
-#   ansible.builtin.include_tasks: cloud_init_vm_setup.yml
+# - name: Create and install certificate
+#   ansible.builtin.include_tasks: ssl_setup.yml
+
+- name: Create an Ubuntu cloud-init template
+  ansible.builtin.include_tasks: cloud_init_vm_setup.yml
+
+- name: Deploy a Portainer VM
+  ansible.builtin.include_tasks: portainer_deployment.yml

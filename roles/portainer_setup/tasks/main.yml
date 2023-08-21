@@ -1,4 +1,7 @@
 ---
+- name: Include configuration variables
+  ansible.builtin.include_vars: configuration.yml
+
 - name: Generate SSL Certs
   ansible.builtin.include_tasks: ssl_generation.yml
 
