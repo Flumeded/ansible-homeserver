@@ -1,4 +1,7 @@
 ---
+- name: Include Proxmox Credentials for API usage
+  ansible.builtin.include_vars: secret.proxmox_token.yml
+
 - name: Get a ticket
   ansible.builtin.uri:
     url: "https://{{ proxmox_ip }}:8006/api2/json/access/ticket"
@@ -12,9 +15,9 @@
       password: "{{ proxmox_password }}"
   register: proxmox_ticket
 
-- name: Check if cloud init VM exists
+- name: Check if HAOS VM exists
   ansible.builtin.uri:
-    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ haos_vm_id }}/status/current"
     method: GET
     status_code: 200, 500
     body_format: form-urlencoded
@@ -22,24 +25,27 @@
     headers:
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
-  register: vm_create_result
+  register: haos_exists_result
 
-- name: Download Ubuntu 22 04 cloud image
+- name: Check if HAOS image exists
+  ansible.builtin.stat: 
+    path: "/tmp/{{ haos_release | regex_replace('\\.xz$', '') }}"
+  register: haos_stat_result
+  when: haos_exists_result.status != 200
+
+# TODO: Maybe change this later to lookup for latest release?
+- name: Get latest release of HAOS
   ansible.builtin.get_url:
-    url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-    dest: "/tmp/jammy-server-cloudimg-amd64.img"
-    owner: root
-    group: root
+    url: "https://github.com/home-assistant/operating-system/releases/latest/download/{{ haos_release }}"
+    dest: /tmp/haos_ova-10.5.qcow2.xz
     mode: '0644'
-  when: vm_create_result.status != 200
+  when: haos_stat_result.stat.exists == false and haos_exists_result.status != 200
 
-- name: Add a qemu agent
-  ansible.builtin.command:
-    cmd: "virt-customize -a /tmp/jammy-server-cloudimg-amd64.img --install qemu-guest-agent"
-  register: command_result
-  changed_when: command_result.rc != 0
+- name: Unarchive HAOS image
+  ansible.builtin.shell: "unxz /tmp/{{ haos_release }}"
+  when: haos_stat_result.stat.exists == false and haos_exists_result.status != 200
 
-- name: Create a cloud-init VM
+- name: Create a HAOS VM
   ansible.builtin.uri:
     url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
     method: POST
@@ -51,33 +57,22 @@
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
     body:
       node: '{{ proxmox_node }}'
-      vmid: '{{ cloud_init_vm_id }}'
-      name: '{{ cloud_init_vm_name }}'
+      vmid: '{{ haos_vm_id }}'
+      name: '{{ haos_vm_name }}'
       vcpus: '1'
       cores: '2'
       memory: '2048'
-      boot: 'c'
+      bios: 'ovmf'
       scsihw: 'virtio-scsi-pci'
-      vga: 'serial0'
-      serial0: 'socket'
-      agent: 1
       kvm: '{{ kvm_enabled }}'
       net0: 'virtio,bridge=vmbr0'
-      ide2: 'local-lvm:cloudinit'
-      scsi0: 'local-lvm:0,import-from=/tmp/jammy-server-cloudimg-amd64.img'
-      # There is some issue with urlencoding in Ansible, so I had to manually encode the SSH key and place it
-      # as a variable already encoded. I used https://www.urlencoder.org/
-      sshkeys: '{{ proxmox_ssh_key }}'
-      ciuser: '{{ created_username }}'
-      cipassword: '{{ created_username_password }}'
+      scsi0: 'local-lvm:0,import-from=/tmp/haos_ova-10.5.qcow2'
       ipconfig0: ip=dhcp
-  when: vm_create_result.status != 200
+  when: haos_exists_result.status != 200
 
-# TODO: Check if it's possible to update the image if VM is already existing
-
-- name: Wait untill cloud-init VM deployment is complete
+- name: Wait untill HAOS VM deployment is complete
   ansible.builtin.uri:
-    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ haos_vm_id }}/status/current"
     method: GET
     status_code: 200
     body_format: form-urlencoded
@@ -88,4 +83,4 @@
   until: cloud_init_lock.json.data.lock is not defined
   retries: 15
   delay: 30
-  when: vm_create_result.status != 200
+  when: haos_exists_result.status != 200

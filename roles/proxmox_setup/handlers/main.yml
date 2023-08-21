@@ -2,9 +2,3 @@
   ansible.builtin.service:
     name: pveproxy
     state: restarted
-
-- name: Add a qemu agent
-  ansible.builtin.command:
-    cmd: "virt-customize -a /tmp/jammy-server-cloudimg-amd64.img --install qemu-guest-agent"
-  register: command_result
-  changed_when: command_result.rc != 0

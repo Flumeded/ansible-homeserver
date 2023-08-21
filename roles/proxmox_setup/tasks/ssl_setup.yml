@@ -5,15 +5,7 @@
 
 - name: Include API token
   ansible.builtin.include_vars:
-    file: secret.user.yml
-
-- name: Include API token
-  ansible.builtin.include_vars:
-    file: roles/portainer_setup/vars/secret.compose_settings.yml
-
-- name: Include API token
-  ansible.builtin.include_vars:
-    file: roles/portainer_setup/vars/secret.configs.yml
+    file: roles/portainer_setup/vars/configuration.yml
 
 - name: Get a ticket
   ansible.builtin.uri:
@@ -65,7 +57,7 @@
   become_user: "{{ created_username }}"
   connection: local
 
-- name: Create a private key for a Proxmox
+- name: Create a private key for the Proxmox
   community.crypto.openssl_privatekey:
     path: ./media/certs/proxmox-private.key
   become_user: "{{ created_username }}"

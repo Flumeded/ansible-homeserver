@@ -1,7 +1,3 @@
-- name: Include API token
-  ansible.builtin.include_vars:
-    file: secret.proxmox_token.yml
-
 - name: Get a ticket
   ansible.builtin.uri:
     url: "https://{{ proxmox_ip }}:8006/api2/json/access/ticket"
@@ -25,9 +21,9 @@
     headers:
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
-  register: vm_create_result
+  register: portainer_exist_result
 
-- name: Clone a cloud-init VM if portainer doesn't exists
+- name: Clone a cloud-init VM if portainer VM doesn't exists
   ansible.builtin.uri:
     url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/clone"
     method: POST
@@ -41,7 +37,7 @@
       name: "{{ portainer_vm_name }}"
       newid: "{{ portainer_vm_id }}"
       full: 1
-  when: vm_create_result.status != 200
+  when: portainer_exist_result.status != 200
 
 - name: Wait untill VM is cloned
   ansible.builtin.uri:
@@ -54,9 +50,9 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
   register: portainer_vm_status
   until: portainer_vm_status.json.data.lock is not defined
-  retries: 10
+  retries: 15
   delay: 30
-  when: vm_create_result.status != 200
+  when: portainer_exist_result.status != 200
 
 - name: Change Portainer VM network settings and resources
   ansible.builtin.uri:
@@ -73,7 +69,7 @@
       cores: '3'
       memory: '6000'
       ipconfig0: 'gw={{ portainer_gateway }},ip={{ portainer_ip_changeto }}/24'
-  when: vm_create_result.status != 200
+  when: portainer_exist_result.status != 200
 
 - name: Increase Portainer VM disk size
   ansible.builtin.uri:
@@ -88,7 +84,7 @@
     body:
       disk: "scsi0"
       size: "+50G"
-  when: vm_create_result.status != 200
+  when: portainer_exist_result.status != 200
 
 - name: Start a portainer VM
   ansible.builtin.uri:

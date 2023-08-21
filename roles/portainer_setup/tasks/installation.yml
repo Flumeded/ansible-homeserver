@@ -1,8 +1,4 @@
 ---
-- name: Include portainer secrets variables
-  ansible.builtin.include_vars:
-    file: secret.portainer_installation.yml
-
 - name: Check if portainer already exists
   community.docker.docker_container_info:
     name: portainer
