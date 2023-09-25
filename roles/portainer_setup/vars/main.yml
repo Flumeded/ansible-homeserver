@@ -11,6 +11,7 @@ portainer_stack_list:
   - Container: openbooks
   - Container: traefik
   - Container: watchtower
+  - Container: tailscale
 
 portainer_edition: ee
 portainer_ip: "{{ inventory_hostname }}"

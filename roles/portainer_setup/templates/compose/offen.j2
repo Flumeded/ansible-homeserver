@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  backup:
+    container_name: offen
+    image: offen/docker-volume-backup:v2
+    environment:
+      AWS_S3_BUCKET_NAME: {{ offen_aws_bucket_name }}
+      AWS_ACCESS_KEY_ID: {{ offen_aws_key_id }}
+      AWS_SECRET_ACCESS_KEY: {{ offen_aws_secret_key }}
+      BACKUP_CRON_EXPRESSION: "*/2 * * * *"
+    volumes:
+      - /var/lib/docker/volumes/adguardhome_adguardhome/_data/:/backup/adguardhome:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro   
