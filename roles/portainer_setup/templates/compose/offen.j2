@@ -5,10 +5,15 @@ services:
     container_name: offen
     image: offen/docker-volume-backup:v2
     environment:
+      AWS_ENDPOINT: {{ offen_aws_endpoint }}
       AWS_S3_BUCKET_NAME: {{ offen_aws_bucket_name }}
       AWS_ACCESS_KEY_ID: {{ offen_aws_key_id }}
       AWS_SECRET_ACCESS_KEY: {{ offen_aws_secret_key }}
-      BACKUP_CRON_EXPRESSION: "*/2 * * * *"
+      BACKUP_CRON_EXPRESSION: "0 3 * * 0"
+
     volumes:
-      - /var/lib/docker/volumes/adguardhome_adguardhome/_data/:/backup/adguardhome:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro   
+{% for container in containers %}
+{% if container.Path is not none %}
+      - {{ container.Path }}:/backup/{{ container.Name | trim('/') }}:ro
+{% endif %}
+{% endfor %}
