@@ -8,4 +8,8 @@ ansible-galaxy install -r requirements.yml
 Create server.yml and start the playbook with
 ```cmd
 ansible-playbook server.yml -i inventory.yml --vault-password-file ~/vault-pass
+<<<<<<< HEAD
 ```
+=======
+```
+>>>>>>> origin/main
