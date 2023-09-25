@@ -33,10 +33,10 @@
   vars:
     json_query_var: "[*].{Name: Names[0], Path: Mounts[?contains(Source, '/var/lib')].Source | [0]}"
 
-# TODO: By sheer luck container names contains the slash in them which I can you to construct a path, \
+# TODO: By sheer luck container names contains the slash in them which I can use to construct a path, \
 # so I don't need to regex it out, TBD fix it or not
 
-- name: Add a path to each container's corresponding config file
+- name: Add path to each container's corresponding config file
   ansible.builtin.set_fact:
     containers_and_paths: "{{ containers_and_paths | default([]) \
      + [{'container': item.Name, 'path': item.Path, 'files': lookup('fileglob', 'templates/configs' + item.Name + '/*').split(',')}] }}"
