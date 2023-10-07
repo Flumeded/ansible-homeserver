@@ -15,12 +15,12 @@
 
 - name: Install license
   ansible.builtin.uri:
-    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/licenses"
+    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/licenses/add"
     method: POST
     body_format: json
     validate_certs: false
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
     body:
-      licenseKeys: ["{{ portainer_license }}"]
+      key: "{{ portainer_license }}"
   when: portainer_edition == "ee"
