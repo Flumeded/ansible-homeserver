@@ -1,9 +1,23 @@
 # TODO: Make this task more idempotent and add a handler for a service restart
+# Systemd resolver needs to be reconfgiured, so AgGuard container can work
+- name: Check if resolv.conf has been modified yet
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.conf
+    state: present
+    line: "nameserver 127.0.0.1"
+  check_mode: yes
+  register: check_resolvconf
+
+- name: Test
+  debug: msg="{{ check_resolvconf }}"
+
+
 - name: Create resolved.conf.d directory
   ansible.builtin.file:
     path: /etc/systemd/resolved.conf.d
     state: directory
     mode: "0755"
+  when: check_resolvconf is changed
 
 - name: Template a systemd configuration
   ansible.builtin.template:
@@ -12,11 +26,7 @@
     owner: root
     group: admin
     mode: '0644'
-
-- name: Check if resolv.conf exists
-  ansible.builtin.stat:
-    path: /etc/resolv.conf
-  register: check_file
+  when: check_resolvconf is changed
 
 - name: Backup original resolf.conf
   ansible.builtin.copy:
@@ -25,13 +35,13 @@
     owner: root
     group: admin
     mode: '0644'
-  when: check_file.stat.exists
+  when: check_resolvconf is changed
 
 - name: Delete original resolv.conf
   ansible.builtin.file:
     path: /etc/resolv.conf
     state: absent
-  when: check_file.stat.exists
+  when: check_resolvconf is changed
 
 - name: Link a new resolv.conf instead
   ansible.builtin.file:
@@ -39,6 +49,7 @@
     dest: /etc/resolv.conf
     state: link
   notify: Restart DNSStubListener
+  when: check_resolvconf is changed
 
 - name: Force handlers activation
   ansible.builtin.meta: flush_handlers
