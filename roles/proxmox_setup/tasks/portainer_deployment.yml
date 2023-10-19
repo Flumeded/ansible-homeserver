@@ -65,8 +65,8 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
     body:
-      vcpus: '3'
-      cores: '3'
+      vcpus: '2'
+      cores: '2'
       memory: '6000'
       ipconfig0: 'gw={{ portainer_gateway }},ip={{ portainer_ip_changeto }}/24'
   when: portainer_exist_result.status != 200
