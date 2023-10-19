@@ -1,4 +1,5 @@
 ---
+# Enrypoints
 http:
   serversTransports:
     proxmox:
@@ -7,7 +8,7 @@ http:
       insecureSkipVerify: true
     grafana:
       serverName: "grafana.{{ domain }}"
- #region routers
+# Routers
   routers:
     proxmox:
       entryPoints:
@@ -38,8 +39,16 @@ http:
       tls: {}
       service: valetudo
 
-#endregion
-#region services
+    haos:
+      entryPoints:
+        - "https"
+      rule: "Host(`ha.{{ domain }}`)"
+      tls: {}
+      service: haos
+
+
+
+# Services
   services:
     proxmox:
       loadBalancer:
