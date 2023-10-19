@@ -51,7 +51,8 @@
     method: POST
     body_format: json
     validate_certs: false
-    timeout: '300'
+# Paperless-ngx takes an eternity to deploy
+    timeout: '500'
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
     body:
