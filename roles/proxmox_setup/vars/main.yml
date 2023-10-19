@@ -1,5 +1,5 @@
 proxmox_ip: "{{ inventory_hostname }}"
-proxmox_node: pve01test
+proxmox_node: zaken
 
 cloud_init_vm_name: ubuntu-cloud
 
