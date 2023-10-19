@@ -56,8 +56,12 @@ http:
     valetudo:
       loadBalancer:
         servers:
-          - url: "http://192.168.31.202"
-#endregion
+          - url: "http://{{ valetudo_ip }}"
+    haos:
+      loadBalancer:
+        servers:
+          - url: "http://{{ haos_ip }}:8123"
+# Middlewares
   middlewares:
     https-redirect:
       redirectScheme:
