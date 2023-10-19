@@ -22,15 +22,28 @@
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
   register: content
 
-- name: Disable systemd resolver (if necessary)
-  ansible.builtin.include_tasks: disable_systemd_resolver.yml
+# Systemd resolver needs to be reconfgiured, so AgGuard container can work
+- name: Check if resolv.conf has been modified yet
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.conf
+    state: present
+    line: "nameserver 127.0.0.1"
+  check_mode: true
+  register: check_resolvconf
   when: "'adguardhome' in item.Container"
   loop: "{{ portainer_stack_list }}"
+  notify:
+    - Create resolved.conf.d directory
+    - Template a systemd configuration
+    - Backup original resolf.conf
+    - Delete original resolv.conf
+    - Link a new resolv.conf instead
+    - Restart DNSStubListener
+    - Make sure DNSStubListener is running
 
-# TODO: Seems without proper waiting it won't connect normally. Refactor to service wait?
-- name: Wait for service to start
-  ansible.builtin.wait_for:
-    timeout: 3
+- name: Force Service restarts
+# Othwesie AdGuard won't deploy with an error
+  ansible.builtin.meta: flush_handlers
 
 - name: Deploy all absent stacks
   ansible.builtin.uri:

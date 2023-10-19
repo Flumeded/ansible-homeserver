@@ -1,5 +1,50 @@
 ---
+########################
+## Adguard resolvconf ##
+########################
+- name: Create resolved.conf.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: "0755"
+
+- name: Template a systemd configuration
+  ansible.builtin.template:
+    src: templates/configs/misc/adguard.j2
+    dest: /etc/systemd/resolved.conf.d/adguardhome.conf
+    owner: root
+    group: admin
+    mode: '0644'
+
+- name: Backup original resolf.conf
+  ansible.builtin.copy:
+    src: /etc/resolv.conf
+    dest: /etc/resolv.conf.backup
+    owner: root
+    group: admin
+    mode: '0644'
+
+- name: Delete original resolv.conf
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Link a new resolv.conf instead
+  ansible.builtin.file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+
 - name: Restart DNSStubListener
   ansible.builtin.service:
     name: systemd-resolved
     state: restarted
+
+- name: Make sure DNSStubListener is running
+  ansible.builtin.service_facts:
+  register: service_status
+  until: service_status.ansible_facts.services['systemd-resolved.service'].state == 'running'
+  retries: 30
+  delay: 1
+
+#####################################
