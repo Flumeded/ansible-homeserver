@@ -1,0 +1,37 @@
+- name: Wait for Cloud-init to finish
+  ansible.builtin.wait_for:
+    path: /var/log/cloud-init-output.log
+    search_regex: "Cloud-init .* finished"
+    state: present
+    timeout: 1000
+  become: true
+
+# I don't really see a way to make built-ing Gatering facts retriable
+# Cloud-init takes some time to create a user, while SSH is already running,
+# Becuase of that, I'm unable to connect straight away.
+# So I'm checking for cloud init status and then manually collect facts
+
+- name: Gather Facts
+  ansible.builtin.gather_facts:
+
+- name: Check if pip is installed
+  ansible.builtin.command: pip --version
+  register: pip_version
+  ignore_errors: true  # Ignore errors to handle the case where pip is not installed
+  changed_when: pip_version != 0
+
+- name: Check if Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_version
+  ignore_errors: true  # Ignore errors to handle the case where Docker is not installed
+  changed_when: pip_version != 0
+
+- name: Install pip if missing
+  ansible.builtin.include_role:
+    name: geerlingguy.pip
+  when: pip_version.rc != 0
+
+- name: Install Docker if missing
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  when: docker_version.rc != 0
