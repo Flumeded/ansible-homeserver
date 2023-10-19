@@ -9,11 +9,32 @@ services:
       AWS_S3_BUCKET_NAME: {{ offen_aws_bucket_name }}
       AWS_ACCESS_KEY_ID: {{ offen_aws_key_id }}
       AWS_SECRET_ACCESS_KEY: {{ offen_aws_secret_key }}
+# 3AM every Sunday
       BACKUP_CRON_EXPRESSION: "0 3 * * 0"
 
+
     volumes:
-{% for container in containers %}
-{% if container.Path is not none %}
-      - {{ container.Path }}:/backup/{{ container.Name | trim('/') }}:ro
-{% endif %}
-{% endfor %}
+      - paperless-data:/backup/paperless-data:ro
+      - paperless-media:/backup/paperless-media:ro
+      - paperless-pgdata:/backup/paperless-pgdata:ro
+      - paperless-redisdata:/backup/paperless-redisdata:ro
+      - adguardhome:/backup/adguardhome:ro
+      - grafana-data:/backup/grafana-data:ro
+
+volumes:
+  paperless-data:
+    driver: local
+  paperless-media:
+    driver: local
+  paperless-pgdata:
+    driver: local
+  paperless-redisdata:
+    driver: local
+  adguardhome:
+    driver: local
+  grafana-data:
+    driver: local
+  
+  
+  
+  
