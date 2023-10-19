@@ -20,7 +20,7 @@ haos_vm_id: "250"
 haos_vm_name: "HAOS"
 haos_release: "haos_ova-10.5.qcow2.xz"
 
-kvm_enabled: 0
+kvm_enabled: 1
 
 ca_passphrase: !vault |
           $ANSIBLE_VAULT;1.1;AES256
