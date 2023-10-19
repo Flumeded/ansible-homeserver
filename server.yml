@@ -11,6 +11,7 @@
 - name: Portainer config
   hosts: portainer
   become: true
+  gather_facts: false
   vars:
 # Ignoring host-key trust prompt
     ansible_ssh_common_args: -o StrictHostKeyChecking=no
