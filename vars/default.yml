@@ -8,7 +8,7 @@ created_username_password: !vault |
           6336326465623238300a343835373338303630326338646434343830653035653939616663656131
           6262
 
-proxmox_node: pve01test
+proxmox_node: zaken
 proxmox_ip: "{{ inventory_hostname }}"
 
 cloud_init_vm_name: ubuntu-cloud
