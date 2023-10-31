@@ -18,7 +18,7 @@ portainer_vm_name: Giran
 
 haos_vm_id: "250"
 haos_vm_name: "HAOS"
-haos_release: "haos_ova-10.5.qcow2.xz"
+haos_release: "haos_ova-11.1"
 
 kvm_enabled: 1
 
