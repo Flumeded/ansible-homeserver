@@ -68,6 +68,8 @@
       memory: '2048'
       bios: 'ovmf'
       scsihw: 'virtio-scsi-pci'
+      agent: 1
+      onboot: 1
       kvm: '{{ kvm_enabled }}'
       net0: 'virtio,bridge=vmbr0'
       scsi0: 'local-lvm:0,import-from=/tmp/{{ haos_release }}.qcow2'
