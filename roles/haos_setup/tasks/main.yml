@@ -36,14 +36,14 @@
 # TODO: Maybe change this later to lookup for latest release?
 - name: Get latest release of HAOS
   ansible.builtin.get_url:
-    url: "https://github.com/home-assistant/operating-system/releases/latest/download/{{ haos_release }}"
-    dest: /tmp/haos_ova-10.5.qcow2.xz
+    url: "https://github.com/home-assistant/operating-system/releases/latest/download/{{ haos_release }}.qcow2.xz"
+    dest: "/tmp/{{ haos_release }}.qcow2.xz"
     mode: '0644'
   when: not haos_stat_result.stat.exists and haos_exists_result.status != 200
 
 - name: Unarchive HAOS image
   ansible.builtin.command:
-    cmd: "unxz /tmp/{{ haos_release }}"
+    cmd: "unxz --force /tmp/{{ haos_release }}.qcow2.xz"
   when: not haos_stat_result.stat.exists and haos_exists_result.status != 200
   register: command_result
   changed_when: command_result.rc != 0
@@ -70,7 +70,7 @@
       scsihw: 'virtio-scsi-pci'
       kvm: '{{ kvm_enabled }}'
       net0: 'virtio,bridge=vmbr0'
-      scsi0: 'local-lvm:0,import-from=/tmp/haos_ova-10.5.qcow2'
+      scsi0: 'local-lvm:0,import-from=/tmp/{{ haos_release }}.qcow2'
       ipconfig0: 'ip=dhcp'
       usb0: 'host=2-9'
       usb1: 'host=2-10'
