@@ -74,8 +74,8 @@
       net0: 'virtio,bridge=vmbr0'
       scsi0: 'local-lvm:0,import-from=/tmp/{{ haos_release }}.qcow2'
       ipconfig0: 'ip=dhcp'
-      usb0: 'host=2-9'
-      usb1: 'host=2-10'
+      usb0: 'host=10c4:ea60'
+      usb1: 'host=2357:0604'
   when: haos_exists_result.status != 200
 
 - name: Wait untill HAOS VM deployment is complete
