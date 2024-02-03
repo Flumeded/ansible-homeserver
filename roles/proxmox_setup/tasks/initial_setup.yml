@@ -1,7 +1,12 @@
 ---
-- name: Ensure enterprise repo file is not present
+- name: Ensure enterprise repo file is not present in repo list
   ansible.builtin.file:
     path: /etc/apt/sources.list.d/pve-enterprise.list
+    state: absent
+
+- name: Ensure enterprise repo file is not present in ceph list
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/ceph.list
     state: absent
 
 - name: Add No Subscription Repository
