@@ -68,6 +68,7 @@
       vcpus: '2'
       cores: '2'
       memory: '6000'
+      onboot: '1'
       ipconfig0: 'gw={{ portainer_gateway }},ip={{ portainer_ip_changeto }}/24'
   when: portainer_exist_result.status != 200
 
