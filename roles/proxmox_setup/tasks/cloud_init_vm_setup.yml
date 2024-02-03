@@ -24,6 +24,10 @@
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
   register: vm_create_result
 
+- name: Install virt-customize
+  ansible.builtin.apt:
+    name: libguestfs-tools
+
 - name: Download Ubuntu 22 04 cloud image
   ansible.builtin.get_url:
     url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
