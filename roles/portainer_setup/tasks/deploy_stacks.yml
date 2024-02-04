@@ -45,6 +45,33 @@
 # Othwesie AdGuard won't deploy with an error
   ansible.builtin.meta: flush_handlers
 
+- name: Find and read Docker Compose template files
+  # This task generate a list of all volumes defined in my compose files, so they can be later added to the Offen container for backups.
+  ansible.builtin.set_fact:
+    compose_volumes: "{{ compose_volumes + ((lookup('template', item) | from_yaml).volumes | default({})).keys() | list | default([]) }}"
+    # It sets a variable called 'compose_volumes' by appending to its existing value.
+    # The appended value is obtained from the following steps:
+
+    # 1. 'lookup('template', item)' reads and processes a template file specified by 'item'.
+    #    It converts the template content into YAML format, since my Compose files are Jinja Templates
+
+    # 2. 'from_yaml' converts the YAML content into a structured data format.
+
+    # 3. '.volumes' extracts a dictionary from the structured data, if it exists.
+    #    This assumes that the Docker Compose template contains a 'volumes' section.
+
+    # 4. 'default({})' ensures that if there is no 'volumes' section in the template,
+    #    it defaults to an empty dictionary to prevent errors.
+
+    # 5. '.keys()' extracts the keys (volume names) from the 'volumes' dictionary.
+
+    # 6. '| list' converts the keys into a list if they are not already in list format.
+
+    # 7. 'default([])' ensures that if there are no keys (volumes), it defaults to an empty list.
+
+  loop: "{{ query('fileglob', 'roles/portainer_setup/templates/compose/*.j2') }}"
+  # The 'loop' iterates over a list of all Compose templates.
+
 - name: Deploy all absent stacks
   ansible.builtin.uri:
     url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/stacks?type=2&method=string&endpointId={{ portainer_endpoint_id }}"
