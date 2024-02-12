@@ -11,12 +11,16 @@ services:
       AWS_SECRET_ACCESS_KEY: "{{ offen_aws_secret_key }}"
       BACKUP_CRON_EXPRESSION: "0 3 * * 0"
     volumes:
-{% for volume in compose_volumes %}
-      - {{ volume }}:/backup/{{ volume }}:ro
+{% for container, volumes in container_volumes_dict.items() %}
+{% for volume in volumes %}
+      - {{ container }}_{{ volume }}:/backup/{{ container }}_{{ volume }}:ro
+{% endfor %}
 {% endfor %}
 
 volumes:
-{% for volume in compose_volumes %}
-  {{ volume }}:
-    driver: local
+{% for container, volumes in container_volumes_dict.items() %}
+{% for volume in volumes %}
+  {{ container }}_{{ volume }}:
+    external: true
+{% endfor %}
 {% endfor %}

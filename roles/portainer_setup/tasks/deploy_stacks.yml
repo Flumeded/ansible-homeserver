@@ -45,32 +45,38 @@
 # Othwesie AdGuard won't deploy with an error
   ansible.builtin.meta: flush_handlers
 
-- name: Find and read Docker Compose template files
-  # This task generate a list of all volumes defined in my compose files, so they can be later added to the Offen container for backups.
+# Okay now this is epic
+
+# I would like to backup my docker volumes using offen container
+# In order to do that I need to map all of my active volumes to this container
+# The following tasks looks into every docker-compose j2 template, renders it, and extracts all defined volumes
+# Since Portainer (I believe) when automatically creating a volume names it stackname_volumename
+# I need to also know the name of the stack to correctly refer to a volume
+# Luckily, my docker compose file is corresponding to the stack name.
+# So this  task takes the filename I'm currently looking into, and creates a dict with mapping Container: Volumename
+# Which I later use in the offen composer file. Offen itself is excluded from the list to prevent recursion
+
+# Detailed workflow:
+# 1. For each file in the loop:
+#    a. Get the container name by removing the '.j2' extension from the current file basename.
+#    b. Render the Jinja2 template to YAML and parse it.
+#    c. Extract the 'volumes' section from the parsed YAML content. If 'volumes' is not defined, default to an
+#       empty dictionary to avoid errors.
+#    d. Convert the 'volumes' dictionary to a list of items, where each item is a key-value pair representing
+#       a volume. Then, map this list to extract only the keys (volume names), ensuring the result is a list.
+# 2. Combine the derived container name (key) and the list of volume names (value) into 'container_volumes_dict'.
+#    Use the 'combine' filter to merge this key-value pair into the existing dictionary, allowing for dynamic
+#    updates with each iteration of the loop.
+# 3. Repeat steps 3 and 4 for each template file found, building up 'container_volumes_dict' with all container-volume
+#    mappings extracted from the templates.
+- name: Populate dictionary with container names and their volumes
   ansible.builtin.set_fact:
-    compose_volumes: "{{ compose_volumes + ((lookup('template', item) | from_yaml).volumes | default({})).keys() | list | default([]) }}"
-    # It sets a variable called 'compose_volumes' by appending to its existing value.
-    # The appended value is obtained from the following steps:
-
-    # 1. 'lookup('template', item)' reads and processes a template file specified by 'item'.
-    #    It converts the template content into YAML format, since my Compose files are Jinja Templates
-
-    # 2. 'from_yaml' converts the YAML content into a structured data format.
-
-    # 3. '.volumes' extracts a dictionary from the structured data, if it exists.
-    #    This assumes that the Docker Compose template contains a 'volumes' section.
-
-    # 4. 'default({})' ensures that if there is no 'volumes' section in the template,
-    #    it defaults to an empty dictionary to prevent errors.
-
-    # 5. '.keys()' extracts the keys (volume names) from the 'volumes' dictionary.
-
-    # 6. '| list' converts the keys into a list if they are not already in list format.
-
-    # 7. 'default([])' ensures that if there are no keys (volumes), it defaults to an empty list.
-
-  loop: "{{ query('fileglob', 'roles/portainer_setup/templates/compose/*.j2') }}"
-  # The 'loop' iterates over a list of all Compose templates.
+    container_volumes_dict: >-
+      {{ container_volumes_dict | default({}) |
+      combine({(item | basename | regex_replace('.j2$', '')):
+      ((lookup('template', item) | from_yaml).volumes | default({}) |
+      dict2items | map(attribute='key') | list)}) }}
+  loop: "{{ query('fileglob', 'roles/portainer_setup/templates/compose/*.j2') | reject('search', 'offen.j2') }}"
 
 - name: Deploy all absent stacks
   ansible.builtin.uri:
