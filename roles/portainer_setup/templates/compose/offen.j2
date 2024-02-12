@@ -3,6 +3,7 @@ version: '3'
 services:
   backup:
     container_name: offen
+    restart: unless-stopped
     image: offen/docker-volume-backup:v2
     environment:
       AWS_ENDPOINT: "{{ offen_aws_endpoint }}"
