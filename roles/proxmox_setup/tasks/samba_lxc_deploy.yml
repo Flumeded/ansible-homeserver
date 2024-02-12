@@ -1,0 +1,94 @@
+---
+- name: Get a ticket
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/access/ticket"
+    method: POST
+    return_content: true
+    body_format: form-urlencoded
+    status_code: 200
+    validate_certs: false
+    body:
+      username: "{{ proxmox_username }}"
+      password: "{{ proxmox_password }}"
+  register: proxmox_ticket
+
+- name: Check if Samba LXC exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ samba_lxc_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: lxc_create_result
+
+- name: Download the .aplinfo file
+  ansible.builtin.get_url:
+    url: "http://download.proxmox.com/images/system/{{ debian_release }}_amd64.aplinfo"
+    dest: "/tmp/{{ debian_release }}_amd64.aplinfo"
+    mode: '0644'
+  when: lxc_create_result.status != 200
+
+- name: Slurp the .aplinfo file
+  ansible.builtin.slurp:
+    src: "/tmp/{{ debian_release }}_amd64.aplinfo"
+  register: aplinfo_content
+  when: lxc_create_result.status != 200
+
+- name: Download the Debian distro
+  ansible.builtin.get_url:
+    url: "http://download.proxmox.com/images/system/{{ debian_release }}_amd64.tar.zst"
+    dest: "/tmp/{{ debian_release }}_amd64.tar.zst"
+    mode: '0644'
+    force: true
+    # We are extracting check sum from the info file and comparing to the file we have (if we have one)
+    # So the file is only re-downloaded when needed
+    checksum: "sha512:{{ (aplinfo_content['content'] | b64decode).split('\n') | select('match', '^sha512sum:') | map('split', ' ') | map('last') | first }}"
+  when: lxc_create_result.status != 200
+
+- name: Create a Samba LXC
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+    body:
+      node: '{{ proxmox_node }}'
+      vmid: '{{ samba_lxc_id }}'
+      ostemplate: '/tmp/{{ debian_release }}_amd64.tar.zst'
+      ostype: 'debian'
+      storage: 'local-lvm'
+      rootfs: 'local-lvm:5'
+      mp0: 'volume=local-lvm:400,mp=/mnt/share'
+      cores: '1'
+      net0: "name=eth0,bridge=vmbr0,gw={{ portainer_gateway }},ip={{ samba_ip }}/24"
+      onboot: '1'
+      unprivileged: '1'
+      features: 'nesting=1'
+      timezone: 'host'
+      ssh-public-keys: '{{ proxmox_ssh_key }}'
+  when: lxc_create_result.status != 200
+
+- name: Start a Samba LXC
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ samba_lxc_id }}/status/start"
+    method: POST
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+
+# Wait for SSH port does not work, it starts to respond some time \
+# after the port is alive, so hardcoding this for now
+# TODO: Fix hardcoded pause
+- name: Wait for 120 seconds
+  ansible.builtin.pause:
+    seconds: 120

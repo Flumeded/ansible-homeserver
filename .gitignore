@@ -7,3 +7,4 @@ vars/ssh/
 media/certs/*
 roles/portainer_setup/templates/configs/**/*.pem
 roles/portainer_setup/templates/configs/**/*.key
+.ansible-lint-ignore

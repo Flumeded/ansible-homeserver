@@ -1,0 +1,6 @@
+---
+- name: Complete prerequisite
+  ansible.builtin.include_tasks: prerequisite.yml
+
+- name: Configure samba file share
+  ansible.builtin.include_tasks: samba_configuration.yml

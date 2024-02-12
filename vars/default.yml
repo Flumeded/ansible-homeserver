@@ -1,4 +1,5 @@
 ---
+### Proxmox Configuration ###
 created_username: flume
 created_username_password: !vault |
           $ANSIBLE_VAULT;1.1;AES256
@@ -11,21 +12,23 @@ created_username_password: !vault |
 proxmox_node: zaken
 proxmox_ip: "{{ inventory_hostname }}"
 
+### Cloud Init VM configuration ###
 cloud_init_vm_name: ubuntu-cloud
 cloud_init_vm_id: "700"
 
+### Portainer VM configuration ###
 portainer_vm_name: Giran
 
+### Home Assistant VM configuration###
 haos_vm_id: "250"
 haos_vm_name: "HAOS"
 haos_release: "haos_ova-11.1"
 
+
+### Samba LXC configuration###
+debian_release: "debian-12-standard_12.2-1"
+samba_lxc_id: "211"
+
+### Switch to 0 when needed to be tested on some nested virtual machine ###
 kvm_enabled: 1
 
-ca_passphrase: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          30653438633665643166623634353663663261353636333666393032383364363731383032313735
-          3932623963303161323233613636323632653437383739360a363537383032323839366636656564
-          33383332393932303933326366346132663166633831626161306439323531613536333861623765
-          3065343939393038320a313064366634623937613433613366666532636461666361303964363062
-          66376262373830643562363230343833316131373235383338316233363239353432

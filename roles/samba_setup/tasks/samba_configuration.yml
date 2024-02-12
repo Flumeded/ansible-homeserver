@@ -1,0 +1,57 @@
+---
+- name: Comment out map to guest line
+# Unmapping failed authentication to guests
+# So Windows would prompt for user login screen when connecting
+  ansible.builtin.lineinfile:
+    path: /etc/samba/smb.conf
+    regexp: '^.*map to guest = bad user'
+    line: '# map to guest = some value'
+    state: present
+  notify: Restart Samba Service
+
+- name: Remove [homes] section
+# Removing homes section so share would not consist \
+# Out of two folders: user's and configured share
+  community.general.ini_file:
+    path: /etc/samba/smb.conf
+    section: homes
+    state: absent
+    mode: '0600'
+  notify: Restart Samba Service
+
+- name: Remove [printers] section
+# Removing unused section
+  community.general.ini_file:
+    path: /etc/samba/smb.conf
+    section: printers
+    state: absent
+    mode: '0600'
+  notify: Restart Samba Service
+
+- name: Remove [print$] section
+# Removing unused section
+  community.general.ini_file:
+    path: /etc/samba/smb.conf
+    section: print$
+    state: absent
+    mode: '0600'
+  notify: Restart Samba Service
+
+- name: Add Homelab Share section
+  ansible.builtin.blockinfile:
+    path: /etc/samba/smb.conf
+    block: |
+      [Homelab_Share]
+        hide files = /lost+found/
+        path = /mnt/share
+        guest ok = no
+        comment =
+        valid users =
+        read only = no
+        browseable = yes
+        map acl inherit = yes
+        acl_xattr:ignore system acls = yes
+        vfs objects = acl_xattr
+    marker: "# {mark} SHARE: ANSIBLE MANAGED BLOCK"
+    insertafter: EOF
+  notify: Restart Samba Service

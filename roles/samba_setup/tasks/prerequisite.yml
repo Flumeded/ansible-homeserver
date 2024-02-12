@@ -1,0 +1,44 @@
+---
+- name: Update apt cache and perform a full system upgrade
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: 'dist'
+
+- name: Install Samba package
+  ansible.builtin.apt:
+    name: 'samba'
+    state: present
+
+- name: Create Samba group on OS level
+  ansible.builtin.group:
+    name: "{{ samba_group }}"
+
+- name: Create Samba user on OS level
+  ansible.builtin.user:
+    name: "{{ samba_username }}"
+    groups: "{{ samba_group }}"
+    append: true
+
+- name: Set group ownership and permissions on the Samba share folder
+  ansible.builtin.file:
+    path: /mnt/share
+    owner: "{{ samba_username }}"
+    group: "{{ samba_group }}"
+    mode: "0770"
+
+# Ughhhhhhhhhhhhhh
+# It is only possible to interactively create  a user in Samba
+# So this shell works around that issue
+# Solution from :
+# https://stackoverflow.com/questions/44762488/non-interactive-samba-user-creation-via-ansible
+# TODO: Maybe I can change it to work with passdb someday
+- name: Configure Samba user on Samba level
+# Pipefail have not been tested. Remove on fail
+  ansible.builtin.shell: >
+    set -o pipefail;
+    (pdbedit --user={{ samba_username }} 2>&1 > /dev/null)
+    || (echo '{{ samba_user_password }}'; echo '{{ samba_user_password }}')
+    | smbpasswd -s -a {{ samba_username }}
+  register: samba_command_results
+  changed_when: "'Added user' in samba_command_results.stdout"
+  no_log: true
