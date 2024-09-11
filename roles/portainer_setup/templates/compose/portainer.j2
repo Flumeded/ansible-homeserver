@@ -4,7 +4,7 @@ services:
     container_name: portainer
     image: portainer/portainer-{{ portainer_edition }}:latest
     ports:
-      - {{ portainer_port }}:{{ portainer_port }}
+      - {{ portainer_port }}:9443
     volumes:
       - portainer_data:/data
       - /var/run/docker.sock:/var/run/docker.sock
