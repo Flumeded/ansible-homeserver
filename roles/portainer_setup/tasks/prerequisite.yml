@@ -6,9 +6,9 @@
     timeout: 1000
   become: true
 
-# I don't really see a way to make built-ing Gatering facts retriable
+# I don't really see a way to make built-ing gathering facts retirable
 # Cloud-init takes some time to create a user, while SSH is already running,
-# Becuase of that, I'm unable to connect straight away.
+# Because of that, I'm unable to connect straight away.
 # So I'm checking for cloud init status and then manually collect facts
 
 - name: Gather Facts
