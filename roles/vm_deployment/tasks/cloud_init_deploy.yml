@@ -1,0 +1,90 @@
+- name: Check if cloud-init VM exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: vm_create_result
+
+- name: Download and configure latest Debian Bookworm cloud image
+  when: vm_create_result.status != 200
+  block:
+    - name: Fetch the latest image
+      ansible.builtin.get_url:
+        url: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+        # Fishing out the checksum from the checksum list
+        # To mitigate fork() issues on MacOS you might need \
+        # to run `export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
+        checksum: >
+          sha512:{{ lookup('url', 'https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS')
+          | regex_search('([a-f0-9]+)\s+debian-12-generic-amd64\.qcow2', '\1') }}
+        dest: "/tmp/debian-12-generic-amd64.qcow2"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install virt-customize
+      ansible.builtin.apt:
+        name: libguestfs-tools
+
+    - name: Add a qemu agent
+      ansible.builtin.command:
+        cmd: "virt-customize -a /tmp/debian-12-generic-amd64.qcow2 --install qemu-guest-agent"
+      register: command_result
+      changed_when: command_result.rc != 0
+
+    - name: Create a cloud-init VM
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
+        method: POST
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: "PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}"
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+        body:
+          node: '{{ proxmox_node }}'
+          vmid: '{{ cloud_init_vm_id }}'
+          name: '{{ cloud_init_vm_name }}'
+          vcpus: '1'
+          cores: '2'
+          memory: '2048'
+          boot: 'c'
+          bios: 'ovmf'
+          efidisk0: 'local-lvm:0,efitype=4m'
+          scsihw: 'virtio-scsi-pci'
+          vga: 'serial0'
+          serial0: 'socket'
+          agent: 1
+          kvm: '{{ kvm_enabled | default(1) }}'
+          net0: 'virtio,bridge=vmbr0'
+          ide2: 'local-lvm:cloudinit'
+          scsi0: 'local-lvm:0,import-from=/tmp/debian-12-generic-amd64.qcow2'
+          protection: '{{ vm_protection | default(1) }}'
+          # https://github.com/ansible/ansible/issues/73054
+          # https://github.com/pallets/jinja/issues/515
+          # Now I need to cross "Encounter 2 bugs while doing something simple in Ansible" \
+          # from my Bingo card
+          sshkeys: '{{ "{}".format(cloud_init_ssh_key) | urlencode | replace("/", "%2F") }}'
+          ciuser: '{{ created_username }}'
+          cipassword: '{{ created_username_password }}'
+          ipconfig0: ip=dhcp
+
+    - name: Wait untill cloud-init VM deployment is complete
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/status/current"
+        method: GET
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      register: cloud_init_lock
+      until: cloud_init_lock.json.data.lock is not defined
+      retries: 30
+      delay: 10

@@ -1,4 +1,3 @@
----
 api:
   dashboard: true
 entryPoints:
@@ -24,11 +23,10 @@ certificatesResolvers:
           - "1.0.0.1:53"
 providers:
   docker:
-    endpoint: "unix:///var/run/docker.sock"
+    endpoint: "tcp://socket-proxy:2375""
     exposedByDefault: false
     network: proxy
   file:
     filename: /etc/traefik/config.yml
 log:
   level: ERROR
-  filePath: /etc/traefik/logs

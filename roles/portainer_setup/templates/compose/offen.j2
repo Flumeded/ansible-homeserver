@@ -1,10 +1,8 @@
-version: '3'
-
 services:
   backup:
     container_name: offen
     restart: unless-stopped
-    image: offen/docker-volume-backup:v2
+    image: offen/docker-volume-backup:latest
     environment:
       AWS_ENDPOINT: "{{ offen_aws_endpoint }}"
       AWS_S3_BUCKET_NAME: "{{ offen_aws_bucket_name }}"
@@ -12,16 +10,12 @@ services:
       AWS_SECRET_ACCESS_KEY: "{{ offen_aws_secret_key }}"
       BACKUP_CRON_EXPRESSION: "0 3 * * 0"
     volumes:
-{% for container, volumes in container_volumes_dict.items() %}
-{% for volume in volumes %}
-      - {{ container }}_{{ volume }}:/backup/{{ container }}_{{ volume }}:ro
-{% endfor %}
+{% for volume in all_volumes %}
+      - {{ volume }}:/backup/{{ volume }}:ro
 {% endfor %}
 
 volumes:
-{% for container, volumes in container_volumes_dict.items() %}
-{% for volume in volumes %}
-  {{ container }}_{{ volume }}:
+{% for volume in all_volumes %}
+  {{ volume }}:
     external: true
-{% endfor %}
 {% endfor %}

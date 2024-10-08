@@ -1,0 +1,35 @@
+- name: Extract all unique volumes, networks, and stack names from Docker Compose templates (excluding 'offen.j2')
+  ansible.builtin.set_fact:
+    all_volumes: >
+      {{ (all_volumes | default([])) + (lookup('template', item) | from_yaml).volumes |
+      default({}) | dict2items | map(attribute='key') | list }}
+    all_networks: >
+      {{ (all_networks | default([])) + (lookup('template', item) | from_yaml).networks |
+      default({}) | dict2items | map(attribute='key') | list }}
+    stack_list: "{{ (stack_list | default([])) + [item | basename | regex_replace('.j2$', '')] }}"
+  loop: "{{ query('fileglob', 'roles/portainer_setup/templates/compose/*.j2') | reject('search', 'offen.j2') }}"
+
+- name: Remove duplicates from all_volumes and all_networks
+  ansible.builtin.set_fact:
+    all_volumes: "{{ all_volumes | unique }}"
+    all_networks: "{{ all_networks | unique }}"
+
+- name: Get list of all stack names from compose templates
+  ansible.builtin.set_fact:
+    stack_list_all: >
+      {{ query('fileglob', 'roles/portainer_setup/templates/compose/*.j2') |
+      map('basename') | map('regex_replace', '.j2$', '') | list }}
+
+- name: Create Docker volumes and networks
+  block:
+    - name: Create Docker volumes
+      community.docker.docker_volume:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ all_volumes }}"
+
+    - name: Create Docker networks
+      community.docker.docker_network:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ all_networks }}"

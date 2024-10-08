@@ -1,4 +1,3 @@
----
 - name: Comment out map to guest line
 # Unmapping failed authentication to guests
 # So Windows would prompt for user login screen when connecting

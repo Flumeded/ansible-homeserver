@@ -1,0 +1,96 @@
+- name: Check if Portainer VM exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: portainer_exist_result
+
+- name: Clone a cloud-init VM if portainer VM does not exist
+  when: portainer_exist_result.status != 200
+  block:
+    - name: Clone cloud-init VM
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ cloud_init_vm_id }}/clone"
+        method: POST
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+        body:
+          name: "{{ portainer_vm_name }}"
+          newid: "{{ portainer_vm_id }}"
+          full: 1
+      register: clone_vm_result
+      changed_when: clone_vm_result.status == 200
+
+    - name: Wait until VM is cloned
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/current"
+        method: GET
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      register: portainer_vm_status
+      until: portainer_vm_status.json.data.lock is not defined
+      retries: 30
+      delay: 10
+
+- name: Configure VM settings after VM creation or if it is stopped
+  when: clone_vm_result.changed or (portainer_exist_result.json.data.status | default('undefined')) == 'stopped'
+  block:
+    - name: Set VM resources
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/config"
+        method: POST
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+        body:
+          vcpus: '2'
+          cores: '2'
+          memory: '6000'
+          onboot: '1'
+          protection: '{{ vm_protection | default(1) }}'
+          ipconfig0: "gw={{ network_gateway }},ip={{ hostvars['portainer']['ansible_host'] }}/24"
+
+    - name: Configure VM disk
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/resize"
+        method: PUT
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+        body:
+          disk: "scsi0"
+          size: "+50G"
+
+    - name: Start Portainer VM if it is stopped or created
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ portainer_vm_id }}/status/start"
+        method: POST
+        status_code: 200, 500
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+
+- name: Wait for SSH service to start
+  ansible.builtin.wait_for:
+    host: "{{ hostvars['portainer']['ansible_host'] }}"
+    port: 22

@@ -1,0 +1,10 @@
+- name: Restart pveproxy
+  ansible.builtin.service:
+    name: pveproxy
+    state: restarted
+
+- name: Reinstall proxmox-widget-toolkit
+  ansible.builtin.apt:
+    name: proxmox-widget-toolkit
+    state: "{{ item }}"
+  with_items: ['absent', 'present']

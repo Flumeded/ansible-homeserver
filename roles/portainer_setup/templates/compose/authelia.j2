@@ -1,8 +1,8 @@
-version: '3'
 services:
   authelia:
     image: authelia/authelia
     container_name: authelia
+    restart: unless-stopped
     volumes:
       - authelia:/config
     networks:
@@ -12,17 +12,14 @@ services:
       - 'dockupdater.enable=true'
       - 'traefik.docker.network=proxy'
       - 'traefik.http.routers.authelia-rtr.entrypoints=https'
-      - 'traefik.http.routers.authelia-rtr.rule=Host(`{{ authelia_domain }}`)'
+      - 'traefik.http.routers.authelia-rtr.rule=Host(`auth.{{ domain }}`)'
       - 'traefik.http.routers.authelia-rtr.tls=true'
       - 'traefik.http.routers.authelia-rtr.service=authelia-svc'
-      - 'traefik.http.services.authelia-svc.loadbalancer.server.port={{ authelia_port }}'
+      - 'traefik.http.services.authelia-svc.loadbalancer.server.port=9091'
     expose:
-      - {{ authelia_port }}
-    restart: unless-stopped
+      - 9091
     environment:
-      - {{ timezone }}
-    healthcheck:
-      disable: true
+      - TZ={{ timezone }}
 
 networks:
   proxy:
@@ -30,3 +27,4 @@ networks:
 
 volumes:
   authelia:
+    external: true

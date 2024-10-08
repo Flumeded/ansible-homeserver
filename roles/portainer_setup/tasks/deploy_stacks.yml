@@ -1,7 +1,7 @@
 # TODO: Refactor so token gets pulled only when it's absent
-- name: Get a token if needed
+- name: Get an admin
   ansible.builtin.uri:
-    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/auth"
+    url: "https://{{ portainer_ip }}:{{ 9443 }}/api/auth"
     method: POST
     return_content: true
     body_format: json
@@ -12,84 +12,46 @@
       Password: "{{ portainer_password }}"
   register: auth_token
 
-- name: Check if stack exists
-  ansible.builtin.uri:
-    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/stacks"
-    method: GET
-    validate_certs: false
-    return_content: true
-    headers:
-      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
-  register: content
-
-# Systemd resolver needs to be reconfgiured, so AgGuard container can work
-- name: Check if resolv.conf has been modified yet
-  ansible.builtin.lineinfile:
-    path: /etc/resolv.conf
-    state: present
-    line: "nameserver 127.0.0.1"
-  check_mode: true
-  register: check_resolvconf
-  when: "'adguardhome' in item.Container"
-  loop: "{{ portainer_stack_list }}"
-  notify:
-    - Create resolved.conf.d directory
-    - Template a systemd configuration
-    - Backup original resolf.conf
-    - Delete original resolv.conf
-    - Link a new resolv.conf instead
-    - Restart DNSStubListener
-    - Make sure DNSStubListener is running
-
-- name: Force Service restarts
-# Othwesie AdGuard won't deploy with an error
-  ansible.builtin.meta: flush_handlers
-
-# Okay now this is epic
-
-# I would like to backup my docker volumes using offen container
-# In order to do that I need to map all of my active volumes to this container
-# The following tasks looks into every docker-compose j2 template, renders it, and extracts all defined volumes
-# Since Portainer (I believe) when automatically creating a volume names it stackname_volumename
-# I need to also know the name of the stack to correctly refer to a volume
-# Luckily, my docker compose file is corresponding to the stack name.
-# So this  task takes the filename I'm currently looking into, and creates a dict with mapping Container: Volumename
-# Which I later use in the offen composer file. Offen itself is excluded from the list to prevent recursion
-
-# Detailed workflow:
-# 1. For each file in the loop:
-#    a. Get the container name by removing the '.j2' extension from the current file basename.
-#    b. Render the Jinja2 template to YAML and parse it.
-#    c. Extract the 'volumes' section from the parsed YAML content. If 'volumes' is not defined, default to an
-#       empty dictionary to avoid errors.
-#    d. Convert the 'volumes' dictionary to a list of items, where each item is a key-value pair representing
-#       a volume. Then, map this list to extract only the keys (volume names), ensuring the result is a list.
-# 2. Combine the derived container name (key) and the list of volume names (value) into 'container_volumes_dict'.
-#    Use the 'combine' filter to merge this key-value pair into the existing dictionary, allowing for dynamic
-#    updates with each iteration of the loop.
-# 3. Repeat steps 3 and 4 for each template file found, building up 'container_volumes_dict' with all container-volume
-#    mappings extracted from the templates.
-- name: Populate dictionary with container names and their volumes
+- name: Add path to each volume's corresponding config file
   ansible.builtin.set_fact:
-    container_volumes_dict: >-
-      {{ container_volumes_dict | default({}) |
-      combine({(item | basename | regex_replace('.j2$', '')):
-      ((lookup('template', item) | from_yaml).volumes | default({}) |
-      dict2items | map(attribute='key') | list)}) }}
-  loop: "{{ query('fileglob', 'roles/portainer_setup/templates/compose/*.j2') | reject('search', 'offen.j2') }}"
+    volumes_and_paths: >
+      {{ volumes_and_paths | default([]) +
+      [{'volume': item, 'path': '/var/lib/docker/volumes/' + item + '/_data', 'files':
+      (query('fileglob', 'templates/configs/' + item + '/*') | list)}] }}
+  loop: "{{ all_volumes }}"
+  when: query('fileglob', 'templates/configs/' + item + '/*') | length > 0
 
-- name: Deploy all absent stacks
+- name: Template all files in the Docker volume
+  ansible.builtin.template:
+    src: "{{ item.1 }}"
+    dest: "{{ item.0.path }}/{{ item.1 | basename | regex_replace('.j2$', '')}}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ volumes_and_paths | subelements('files', 'skip_missing=True') }}"
+
+- name: Fetch existing stacks
   ansible.builtin.uri:
-    url: "https://{{ portainer_ip }}:{{ portainer_port }}/api/stacks?type=2&method=string&endpointId={{ portainer_endpoint_id }}"
+    url: "https://{{ portainer_ip }}:{{ 9443 }}/api/stacks"
+    method: GET
+    return_content: true
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ (auth_token.content | from_json).jwt }}"
+  register: existing_stacks_response
+
+- name: Deploy all absent stacks (except Portainer)
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:{{ 9443 }}/api/stacks?type=2&method=string&endpointId={{ portainer_endpoint_id }}"
     method: POST
     body_format: json
     validate_certs: false
-# Paperless-ngx takes an eternity to deploy
-    timeout: '500'
+    timeout: 500
     headers:
-      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+      Authorization: "Bearer {{ (auth_token.content | from_json).jwt }}"
     body:
-      name: "{{ item.Container }}"
-      stackFileContent: "{{ lookup('template', 'roles/portainer_setup/templates/compose/{{ item.Container }}.j2') }}"
-  loop: "{{ portainer_stack_list }}"
-  when: "item.Container not in content.json | json_query('[*].Name')"
+      name: "{{ item }}"
+      stackFileContent: "{{ lookup('template', 'roles/portainer_setup/templates/compose/{{ item }}.j2') }}"
+    status_code: [200, 201]
+  loop: "{{ stack_list_all | reject('equalto', 'portainer') | list }}"
+  when: "item not in (existing_stacks_response.json | json_query('[*].Name'))"

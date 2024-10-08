@@ -1,10 +1,11 @@
 ansible.cfg
 roles/.DS_Store
-roles/portainer_setup/.DS_Store
-.vscode/settings.json
-inventory.yml
+.vscode
+test.yml
+production.yml
 vars/ssh/
 media/certs/*
 roles/portainer_setup/templates/configs/**/*.pem
 roles/portainer_setup/templates/configs/**/*.key
 .ansible-lint-ignore
+.ansible-lint

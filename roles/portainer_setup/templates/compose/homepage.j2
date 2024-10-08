@@ -1,0 +1,32 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    volumes:
+      - homepage:/app/config
+    networks:
+      - proxy
+      - socket-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.homepage.rule=Host(`homepage.{{ domain }}`)"
+      - "traefik.http.routers.homepage.middlewares=authelia@file"
+      - "traefik.http.routers.homepage.middlewares=default-headers@file"
+      - "traefik.http.routers.homepage.entrypoints=https"
+      - "traefik.http.routers.homepage.service=homepage"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.tls=true"
+
+volumes:
+  homepage:
+    external: true
+
+networks:
+  proxy:
+    external: true
+  socket-proxy:
+    external: true

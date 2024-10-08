@@ -1,12 +1,21 @@
-version: "3.8"
 services: 
   cloudflared: 
     image: cloudflare/cloudflared 
     container_name: cloudflared
     restart: unless-stopped 
     command: tunnel run {{ cloudflared_tunnel }}
+    environment:
+      - TZ={{ timezone }}
     volumes:
       - cloudflared:/home/nonroot/.cloudflared/
+    networks:
+      - proxy
 
 volumes:
-    cloudflared:
+  cloudflared:
+    external: true
+
+networks:
+  proxy:
+    external: true
+
