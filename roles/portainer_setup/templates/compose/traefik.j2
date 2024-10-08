@@ -1,4 +1,3 @@
-version: '3'
 services:
   traefik:
     image: traefik:latest
@@ -6,37 +5,43 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    networks:
-      - proxy
     ports:
       - 80:80
       - 443:443
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - traefik:/etc/traefik/
+    networks:
+      - proxy
+      - socket-proxy
     environment:
       - CF_API_EMAIL={{ traefik_cf_email }}  # Cloudflare's account email
       - CF_DNS_API_TOKEN={{ traefik_cf_token }} # You can also use the API KEY
-      - TZ={{ timezone }}
-      
+      - TZ={{ timezone }}  
     labels:
+# Dashboard configuration
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.entrypoints=https"
-      - "traefik.http.routers.traefik.rule=Host(`{{ traefik_domain }}`)"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.flume.ninja`)"
       - "traefik.http.routers.traefik.tls=true"
-      - "traefik.http.routers.traefik.tls.certresolver=cloudflare"
-      - "traefik.http.routers.traefik.tls.domains[0].main={{ domain }}"
-      - "traefik.http.routers.traefik.tls.domains[0].sans=*.{{ domain }}"
-      - "traefik.http.routers.traefik.service=api@internal"
-
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik:/etc/traefik/
-
+      - "traefik.http.routers.traefik.middlewares=allow-internal-only@docker"
+      - "traefik.http.routers.traefik.service=api@internal"  
+# Docker Middlewares
+  ## Allow access only from local network
+      - "traefik.http.middlewares.allow-internal-only.ipallowlist.sourcerange=192.168.31.0/24"
+  ## Obsidian-livesync CORS policies
+      - "traefik.http.middlewares.obsidiancors.headers.accesscontrolallowmethods=GET,PUT,POST,HEAD,DELETE"
+      - "traefik.http.middlewares.obsidiancors.headers.accesscontrolallowheaders=accept,authorization,content-type,origin,referer"
+      - "traefik.http.middlewares.obsidiancors.headers.accesscontrolalloworiginlist=app://obsidian.md,capacitor://localhost,http://localhost"
+      - "traefik.http.middlewares.obsidiancors.headers.accesscontrolmaxage=3600"
+      - "traefik.http.middlewares.obsidiancors.headers.addvaryheader=true"
+      - "traefik.http.middlewares.obsidiancors.headers.accessControlAllowCredentials=true"
 volumes:
   traefik:
+    external: true
 
 networks:
   proxy:
     external: true
-  traefik:
+  socket-proxy:
     external: true
-

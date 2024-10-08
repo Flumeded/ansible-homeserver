@@ -1,0 +1,5 @@
+- name: Update all servers
+  hosts: all
+  become: true
+  roles:
+    - role: update_servers

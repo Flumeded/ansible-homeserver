@@ -1,16 +1,15 @@
----
-version: '3.3'
 services:
     openbooks:
-        container_name: openbooks
         image: evanbuss/openbooks:latest
-        command: --name {{ created_username }} --persist
-        ports:
-            - '7030:80'
-        volumes:
-            - 'openbooks:/books'
+        container_name: openbooks
         restart: unless-stopped
+        command: --name {{ portainer_username }} --persist
+        ports:
+            - 7030:80
+        volumes:
+            - openbooks:/books
 volumes:
     openbooks:
+        external: true
 
 

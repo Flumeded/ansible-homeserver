@@ -1,0 +1,30 @@
+- name: Remove proxmox nag pop-up with a script
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/no-nag-script
+    # Taken from: \
+    # https://github.com/tteck/Proxmox/raw/main/misc/post-pve-install.sh
+    content: >
+      DPkg::Post-Invoke { "dpkg -V proxmox-widget-toolkit | grep -q '/proxmoxlib\.js$';
+      if [ $? -eq 1 ]; then { echo 'Removing subscription nag from UI...';
+      sed -i '/.*data\.status.*{/{s/\!//;s/active/NoMoreNagging/}'
+      /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js; }; fi"; };
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reinstall proxmox-widget-toolkit
+
+- name: Ensure enterprise repo file is not present in repo list
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/pve-enterprise.list
+    state: absent
+
+- name: Ensure enterprise repo file is not present in ceph list
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/ceph.list
+    state: absent
+
+- name: Add No Subscription Repository
+  ansible.builtin.apt_repository:
+    repo: deb http://download.proxmox.com/debian {{ ansible_distribution_release }} pve-no-subscription
+    filename: pve-no-subscription
+    state: present

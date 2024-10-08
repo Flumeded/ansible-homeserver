@@ -1,0 +1,99 @@
+- name: Check if HAOS VM exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ haos_vm_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: haos_exist_result
+
+- name: Deploy latest HAOS VM if it does not exists
+  when: haos_exist_result.status != 200
+  block:
+    - name: Fetch latest HAOS image release
+      ansible.builtin.set_fact:
+        latest_haos_image_url: >
+          {{
+          lookup('url', 'https://api.github.com/repos/home-assistant/operating-system/releases/latest') |
+          regex_search('browser_download_url.*(https://.*haos_ova-.*\.qcow2\.xz)', '\1') | first
+          }}
+
+    - name: Set base file name of the image
+      ansible.builtin.set_fact:
+        latest_haos_image_name: "{{ latest_haos_image_url | regex_search('(haos_ova-.*?).qcow2.xz', '\\1') | first }}"
+
+    - name: Download latest release of HAOS -- {{ latest_haos_image_name }}
+      ansible.builtin.get_url:
+        url: "{{ latest_haos_image_url }}"
+        dest: "/tmp/"
+        mode: '0644'
+
+    - name: Unarchive HAOS image
+      ansible.builtin.command:
+        cmd: "unxz --force /tmp/{{ latest_haos_image_name }}.qcow2.xz"
+      register: command_result
+      changed_when: command_result.rc != 0
+
+    - name: Create HAOS VM
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu"
+        method: POST
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+        body:
+          node: '{{ proxmox_node }}'
+          vmid: '{{ haos_vm_id }}'
+          name: '{{ haos_vm_name }}'
+          cpu: 'cputype=host'
+          vcpus: '2'
+          cores: '2'
+          memory: '2048'
+          bios: 'ovmf'
+          efidisk0: 'local-lvm:0,efitype=4m'
+          scsihw: 'virtio-scsi-pci'
+          agent: 1
+          onboot: 1
+          kvm: '{{ kvm_enabled | default(1) }}'
+          net0: 'virtio,bridge=vmbr0'
+          scsi0: 'local-lvm:0,import-from=/tmp/{{ latest_haos_image_name }}.qcow2'
+          ipconfig0: 'ip=dhcp'
+          # SkyConnect ZigBee adapter
+          usb0: '{{ usb0_device | default(omit) }}'
+          # TPLink Bluetooth adapter
+          usb1: '{{ usb1_device | default(omit) }}'
+          protection: '{{ vm_protection | default(1) }}'
+      register: haos_vm_create_result
+      changed_when: haos_vm_create_result.status == 200
+
+    - name: Wait until HAOS VM deployment is complete
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ haos_vm_id }}/status/current"
+        method: GET
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      register: cloud_init_lock
+      until: cloud_init_lock.json.data.lock is not defined
+      retries: 30
+      delay: 10
+
+- name: Start HAOS VM
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/qemu/{{ haos_vm_id }}/status/start"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  when: haos_vm_create_result.changed or (haos_exist_result.json.data.status | default('undefined')) == 'stopped'

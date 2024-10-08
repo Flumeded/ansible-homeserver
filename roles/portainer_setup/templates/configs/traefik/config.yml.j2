@@ -1,34 +1,25 @@
----
-# Enrypoints
+# Migration to v3 setting
+core:
+  defaultRuleSyntax: v2
+
+# EntryPoints
 http:
+
   serversTransports:
-    proxmox:
-      serverName: "proxmox.{{ domain }}"
-    portainer:
+    insecureTransport:
       insecureSkipVerify: true
-    grafana:
-      serverName: "grafana.{{ domain }}"
+
 # Routers
   routers:
+
     proxmox:
       entryPoints:
         - "https"
-      rule: "Host(`{{ proxmox_domain }}`)"
+      rule: "Host(`proxmox.{{ domain }}`)"
       middlewares:
         - authelia
-        - default-headers
       tls: {}
       service: proxmox
-
-    portainer:
-      entryPoints:
-        - "https"
-      rule: "Host(`{{ portainer_domain }}`)"
-      middlewares:
-        - authelia
-        - default-headers
-      tls: {}
-      service: portainer
 
     valetudo:
       entryPoints:
@@ -46,30 +37,65 @@ http:
       tls: {}
       service: haos
 
+    technitium:
+      entryPoints:
+        - "https"
+      rule: "Host(`dns.{{ domain }}`)"
+      service: technitium
+      tls: {}
+      middlewares:
+        - allow-internal-only@docker
 
+    esxi:
+      entryPoints:
+        - "https"
+      rule: "Host(`esxi.{{ domain }}`)"
+      service: esxi
+      tls: {}
+      middlewares:
+        - allow-internal-only@docker
+
+    vcenter:
+      entryPoints:
+        - "https"
+      rule: "Host(`vcenter.{{ domain }}`)"
+      service: vcenter
+      tls: {}
+      middlewares:
+        - allow-internal-only@docker
 
 # Services
   services:
+
     proxmox:
       loadBalancer:
-        serversTransport: proxmox
         servers:
-          - url: "https://{{ proxmox_ip }}:{{ proxmox_port }}"
-        passHostHeader: true
-    portainer:
-      loadBalancer:
-        serversTransport: portainer
-        servers:
-          - url: "https://{{ portainer_ip }}:{{ portainer_port }}"
-        passHostHeader: true
+          - url: "https://192.168.31.250:8006"
+        serversTransport: insecureTransport
+
     valetudo:
       loadBalancer:
         servers:
-          - url: "http://{{ valetudo_ip }}"
+          - url: "http://192.168.31.198"
     haos:
       loadBalancer:
         servers:
-          - url: "http://{{ haos_ip }}:8123"
+          - url: "http://192.168.31.111:8123"
+
+    technitium:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.31.1:5380"
+    esxi:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.31.176"
+        serversTransport: insecureTransport
+    vcenter:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.31.218"
+
 # Middlewares
   middlewares:
     https-redirect:
@@ -77,7 +103,7 @@ http:
         scheme: https
     authelia:
       forwardAuth:
-        address: "http://authelia:{{ authelia_port }}/api/verify?rd=https://{{ authelia_domain }}"
+        address: "http://authelia:9091/api/verify?rd=https://auth.{{ domain }}"
     default-headers:
       headers:
         frameDeny: true

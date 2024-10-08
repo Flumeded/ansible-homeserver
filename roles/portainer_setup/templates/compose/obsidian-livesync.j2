@@ -1,0 +1,35 @@
+services:
+  couchdb:
+    image: couchdb:latest
+    container_name: obsidian-livesync
+    restart: unless-stopped
+    user: 1000:1000
+    ports:
+      - "5984:5984"
+    volumes:
+      - obsidian-livesync:/opt/couchdb/data
+      - couchdb:/opt/couchdb/etc/
+    networks:
+      - proxy
+    environment:
+      - COUCHDB_USER={{ couchdb_user }}
+      - COUCHDB_PASSWORD={{ couchdb_password }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.obsidian-livesync.rule=Host(`obsidian-livesync.{{ domain }}`)"
+      - "traefik.http.routers.obsidian-livesync.middlewares=obsidiancors@docker"
+      - "traefik.http.routers.obsidian-livesync.entrypoints=https"
+      - "traefik.http.routers.obsidian-livesync.service=obsidian-livesync"
+      - "traefik.http.services.obsidian-livesync.loadbalancer.server.port=5984"
+      - "traefik.http.routers.obsidian-livesync.tls=true"
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  obsidian-livesync:
+    external: true
+  couchdb:
+    external: true

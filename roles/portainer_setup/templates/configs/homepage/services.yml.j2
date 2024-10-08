@@ -1,0 +1,79 @@
+- Containers and Virtualization:
+    - Proxmox:
+        href: https://proxmox.{{ domain }}
+        description: zaken
+        icon: proxmox
+        widget:
+            type: proxmox
+            url: https://{{ subnet }}.250:8006
+            username: {{ homepage_proxmox_user }}
+            password: {{ homepage_proxmox_password }}
+            node: zaken # optional
+
+    - Portainer:
+        href: https://portainer.{{ domain }}
+        icon: portainer
+        widget:
+            type: portainer
+            url: https://{{ subnet }}.59:9443
+            env: 1
+            key: {{ portainer_api_key_from_deployment.json.rawAPIKey }}
+
+    - ESXi:
+        href: https://esxi.{{ domain }}
+        icon: vmware-esxi
+        ping: https://{{ subnet }}.176
+
+    - vCenter:
+        href: https://vcenter.{{ domain }}
+        icon: vmware
+        ping: http://{{ subnet }}.152
+
+
+- Services:
+    - Home Assistant:
+        href: https://ha.{{ domain }}
+        icon: home-assistant
+        widget:
+          type: homeassistant
+          url: http://{{ subnet }}.111:8123
+          key: {{ homeassistant_api_key | default('# Replace Me')  }}
+          custom:
+            - state: sensor.govee_small_sensor_temperature
+              label: t° Outside
+              value: "{state} {attributes.unit_of_measurement}"
+            - state: sensor.govee_big_sensor_temperature
+              label: t° Inside
+              value: "{state} {attributes.unit_of_measurement}"
+    - Open Media Vault:
+        href: http://{{ subnet }}.218/
+        icon: openmediavault
+- Home Lab Misc:
+    - Technitium:
+        href: http://dns.{{ domain }}
+        icon: https://technitium.com/img/logo25x25.png
+        widget:
+          type: technitium
+          url: http://{{ subnet }}.1:5380
+          key: {{ technitium_api_key }}
+          range: LastDay
+    - Speedtest:
+        href: http://speedtest.{{ domain }}
+        icon: si-speedtest
+        widget:
+          type: speedtest
+          url: http://{{ subnet }}.59:8042
+    - Grafana:
+        href: http://grafana.{{ domain }}
+        icon: grafana
+          # widget:
+          #type: grafana
+          #url: http://{{ subnet }}.59:3651
+          #username:
+          #password:
+    - Prometheus:
+        href: http://prometheus.{{ domain }}
+        icon: prometheus
+        widget:
+          type: prometheus
+          url: http://{{ subnet }}.59:9044

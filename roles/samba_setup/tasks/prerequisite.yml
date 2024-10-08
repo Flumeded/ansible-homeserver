@@ -1,4 +1,3 @@
----
 - name: Update apt cache and perform a full system upgrade
   ansible.builtin.apt:
     update_cache: true
@@ -27,18 +26,19 @@
     mode: "0770"
 
 # Ughhhhhhhhhhhhhh
-# It is only possible to interactively create  a user in Samba
+# It is only possible to interactively create a user in Samba
 # So this shell works around that issue
 # Solution from :
 # https://stackoverflow.com/questions/44762488/non-interactive-samba-user-creation-via-ansible
 # TODO: Maybe I can change it to work with passdb someday
 - name: Configure Samba user on Samba level
-# Pipefail have not been tested. Remove on fail
-  ansible.builtin.shell: >
-    set -o pipefail;
-    (pdbedit --user={{ samba_username }} 2>&1 > /dev/null)
-    || (echo '{{ samba_user_password }}'; echo '{{ samba_user_password }}')
-    | smbpasswd -s -a {{ samba_username }}
+  ansible.builtin.shell:
+    executable: /bin/bash
+    cmd: >
+      set -o pipefail
+      && (pdbedit --user={{ samba_username }} 2>&1 > /dev/null)
+      || (echo '{{ samba_user_password }}'; echo '{{ samba_user_password }}')
+      | smbpasswd -s -a {{ samba_username }}
   register: samba_command_results
   changed_when: "'Added user' in samba_command_results.stdout"
-  no_log: true
+  # no_log: true

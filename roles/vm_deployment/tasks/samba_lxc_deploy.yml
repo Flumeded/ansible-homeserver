@@ -1,0 +1,84 @@
+- name: Check if Samba LXC exists
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ samba_lxc_id }}/status/current"
+    method: GET
+    status_code: 200, 500
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  register: lxc_exist_result
+
+- name: Download and deploy a Debian LXC container
+  when: lxc_exist_result.status != 200
+  block:
+    - name: Fetch the latest release name
+      ansible.builtin.set_fact:
+        latest_debian_image: >-
+          {{
+            (lookup('url', 'http://download.proxmox.com/images/system/')
+            | regex_findall('debian-[0-9]+-standard_[0-9.]+-[0-9]+_amd64')) | sort | last
+          }}
+
+    - name: Download {{ latest_debian_image }}
+      ansible.builtin.get_url:
+        # Looking for the latest Debian .zst release with regex
+        url: "http://download.proxmox.com/images/system/{{ latest_debian_image }}.tar.zst"
+        dest: "/tmp/{{ latest_debian_image }}.tar.zst"
+        mode: '0644'
+        force: true
+        # TODO: Figure out multiline when slashes are used
+        checksum: >
+          sha512:{{ lookup('url', 'http://download.proxmox.com/images/system/{{ latest_debian_image }}.aplinfo') |
+          regex_search('sha512sum: ([a-f0-9]+)', '\1') }}
+
+    - name: Create and configure Samba LXC container
+      ansible.builtin.uri:
+        url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc"
+        method: POST
+        status_code: 200
+        body_format: form-urlencoded
+        validate_certs: false
+        headers:
+          Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+          CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+        body:
+          node: '{{ proxmox_node }}'
+          vmid: '{{ samba_lxc_id }}'
+          ostemplate: '/tmp/{{ latest_debian_image }}.tar.zst'
+          ostype: 'debian'
+          storage: 'local-lvm'
+          rootfs: 'local-lvm:5'
+          mp0: 'volume=local-lvm:{{ share_size | default("100") }},mp=/mnt/share'
+          cores: '1'
+          # TODO: Implement more robust {{ subet }} variable, now I'm declaring it manually
+          net0: "name=eth0,bridge=vmbr0,gw={{ samba_ip | regex_replace('\\.[0-9]+$', '') }}.1,ip={{ samba_ip }}/24"
+          onboot: '1'
+          protection: '{{ vm_protection | default(1) }}'
+          unprivileged: '1'
+          features: 'nesting=1'
+          timezone: 'host'
+          # This issue -- https://github.com/ansible/ansible/issues/73054
+          # Plus I store my variable is already encoded, so decoding it back now
+          # TODO: I just realized that issue might be in the quotes ''/"", I will check that later
+          ssh-public-keys: '{{ "{}".format(cloud_init_ssh_key) }}'
+      register: lxc_create_result
+      changed_when: lxc_create_result.status == 200
+
+- name: Start the Samba LXC container
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_ip }}:8006/api2/json/nodes/{{ proxmox_node }}/lxc/{{ samba_lxc_id }}/status/start"
+    method: POST
+    status_code: 200
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
+      CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
+  when: lxc_create_result.changed or (lxc_exist_result.json.data.status | default('undefined')) == 'stopped'
+
+- name: Wait for SSH service to start
+  ansible.builtin.wait_for:
+    host: "{{ hostvars['samba']['ansible_host'] }}"
+    port: 22

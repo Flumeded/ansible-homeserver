@@ -1,0 +1,225 @@
+- name: Create portainer admin user
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/admin/init"
+    method: POST
+    body_format: json
+    status_code: 200, 409
+    validate_certs: false
+    body:
+      Username: "{{ portainer_username }}"
+      Password: "{{ portainer_password }}"
+
+- name: Acquire admin auth token
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/auth"
+    method: POST
+    return_content: true
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    body:
+      Username: "{{ portainer_username }}"
+      Password: "{{ portainer_password }}"
+  register: auth_token
+
+- name: Install license
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:{{ 9443 }}/api/licenses/add"
+    method: POST
+    body_format: json
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+    body:
+      key: "{{ portainer_license }}"
+  when: portainer_edition == "ee"
+
+- name: Check if required endpoint exists
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/endpoints/{{ portainer_endpoint_id }}"
+    method: GET
+    body_format: json
+    status_code: 200, 404
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+  register: endpoint_exists
+
+- name: Create endpoint if its missing
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/endpoints"
+    method: POST
+    body_format: form-multipart
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+    body:
+      Name: '{{ portainer_endpoint_name }}'
+      EndpointCreationType: '1'
+      GroupID: '1'
+      PublicURL: "{{ portainer_ip }}"
+  when: endpoint_exists.status == 404
+
+- name: Fetch admin user ID
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/me"
+    method: GET
+    return_content: true
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+  register: portainer_admin
+
+- name: Set UI color for admin user
+# To visually distinguish between production and test
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/{{ portainer_admin.json.Id }}"
+    method: PUT
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ auth_token.json.jwt }}"
+    body:
+      theme:
+        color: "{{ ui_color }} | default ('dark')"
+
+- name: Check if Homepage user exists
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users"
+    method: GET
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+  register: homepage_user_exist
+
+- name: Create homepage user
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users"
+    method: POST
+    body_format: json
+    status_code: 200, 409
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+    body:
+      Username: "{{ homepage_portainer_username }}"
+      Password: "{{ homepage_portainer_password }}"
+      Role: 2 # Non-admin
+  register: homepage_user
+
+- name: Provide Homepage with HelpDesk permissions to the endpoint
+  # This task has some if clause to determine from where to take the User ID
+  # There are two cases: user already exists, and user was created by the task
+  # So we have 2 possible places where ID might be, checking them both
+  # Also body is literal due to
+  # https://stackoverflow.com/questions/68083505/how-to-pass-a-variable-as-json-object-key-in-ansible-playbook/
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/endpoints/{{ portainer_endpoint_id }}"
+    method: PUT
+    body_format: json
+    return_content: true
+    status_code: 200
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ auth_token.json.jwt }}"
+    body: >-
+      {{
+        {
+          "UserAccessPolicies": {
+            (
+              homepage_user_exist.json | json_query('[?Username==`homepage`].Id') | first
+              if (homepage_user_exist.json | json_query('[?Username==`homepage`].Id') | length > 0)
+              else homepage_user.json.Id
+            ): {
+              "RoleId": 2
+            }
+          }
+        }
+      }}
+  register: update_response
+
+- name: Get token of homepage user
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:{{ 9443 }}/api/auth"
+    method: POST
+    return_content: true
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    body:
+      Username: "{{ homepage_portainer_username }}"
+      Password: "{{ homepage_portainer_password }}"
+  register: auth_token
+
+- name: Check homepage user ID
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/me"
+    method: GET
+    return_content: true
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    headers:
+      Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
+  register: homepage_user # In case user already created we need to fetch its ID
+
+- name: Set UI color for homepage user
+# To visually distinguish between production and test
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/{{ homepage_user.json.Id }}"
+    method: PUT
+    body_format: json
+    status_code: 200
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ auth_token.json.jwt }}"
+    body:
+      theme:
+        color: "{{ ui_color }} | default ('dark')"
+
+- name: Fetch existing tokens for the homepage user
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/{{ homepage_user.json.Id }}/tokens"
+    method: GET
+    return_content: true
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ auth_token.json.jwt }}"
+  register: existing_tokens_response
+
+- name: Remove existing token to recreate it again
+  # We either need to store the key as artifact on playbook success or \
+  # we can simple recreate one every time, doing latter
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/{{ homepage_user.json.Id }}/tokens/{{ existing_tokens_response.json[0].id }}"
+    method: DELETE
+    body_format: json
+    return_content: true
+    status_code: 204
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ auth_token.json.jwt }}"
+    body:
+      id: "{{ homepage_user.json.Id }}"
+      keyID: "{{ existing_tokens_response.json[0].id }}"
+  when: (existing_tokens_response.json | json_query('[?description==`homepage`]')) | length > 0
+
+- name: Create an access token for homepage dashboard
+  ansible.builtin.uri:
+    url: "https://{{ portainer_ip }}:9443/api/users/{{ homepage_user.json.Id }}/tokens"
+    method: POST
+    body_format: json
+    return_content: true
+    status_code: 201
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ auth_token.json.jwt }}"
+    body:
+      description: "homepage"
+      password: "{{ homepage_portainer_password }}"
+  register: portainer_api_key_from_deployment
