@@ -10,6 +10,7 @@
       username: "{{ proxmox_username }}"
       password: "{{ proxmox_password }}"
   register: proxmox_ticket
+  check_mode: false
 
 - name: Proxmox configuration
   ansible.builtin.include_tasks: prerequisite.yml

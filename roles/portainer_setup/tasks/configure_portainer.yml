@@ -21,6 +21,7 @@
       Username: "{{ portainer_username }}"
       Password: "{{ portainer_password }}"
   register: auth_token
+  check_mode: false
 
 - name: Install license
   ansible.builtin.uri:
@@ -44,6 +45,7 @@
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
   register: endpoint_exists
+  check_mode: false
 
 - name: Create endpoint if its missing
   ansible.builtin.uri:
@@ -71,6 +73,7 @@
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
   register: portainer_admin
+  check_mode: false
 
 - name: Set UI color for admin user
 # To visually distinguish between production and test
@@ -96,6 +99,7 @@
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
   register: homepage_user_exist
+  check_mode: false
 
 - name: Create homepage user
   ansible.builtin.uri:
@@ -155,6 +159,7 @@
       Username: "{{ homepage_portainer_username }}"
       Password: "{{ homepage_portainer_password }}"
   register: auth_token
+  check_mode: false
 
 - name: Check homepage user ID
   ansible.builtin.uri:
@@ -167,6 +172,7 @@
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
   register: homepage_user # In case user already created we need to fetch its ID
+  check_mode: false
 
 - name: Set UI color for homepage user
 # To visually distinguish between production and test
@@ -191,6 +197,7 @@
     headers:
       Authorization: "Bearer {{ auth_token.json.jwt }}"
   register: existing_tokens_response
+  check_mode: false
 
 - name: Remove existing token to recreate it again
   # We either need to store the key as artifact on playbook success or \

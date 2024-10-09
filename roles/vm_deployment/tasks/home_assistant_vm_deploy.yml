@@ -9,6 +9,7 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
   register: haos_exist_result
+  check_mode: false
 
 - name: Deploy latest HAOS VM if it does not exists
   when: haos_exist_result.status != 200
@@ -20,6 +21,7 @@
           lookup('url', 'https://api.github.com/repos/home-assistant/operating-system/releases/latest') |
           regex_search('browser_download_url.*(https://.*haos_ova-.*\.qcow2\.xz)', '\1') | first
           }}
+      check_mode: false
 
     - name: Set base file name of the image
       ansible.builtin.set_fact:

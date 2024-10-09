@@ -3,12 +3,14 @@
   register: pip_version
   ignore_errors: true  # Ignore errors to handle the case where pip is not installed
   changed_when: pip_version != 0
+  check_mode: false
 
 - name: Check if Docker is installed
   ansible.builtin.command: docker --version
   register: docker_version
   ignore_errors: true  # Ignore errors to handle the case where Docker is not installed
   changed_when: pip_version != 0
+  check_mode: false
 
 - name: Install pip if missing
   ansible.builtin.include_role:

@@ -2,11 +2,13 @@
   community.docker.docker_container_info:
     name: portainer
   register: container
+  check_mode: false
 
 - name: Check if EE license key is provided and change edition if not
   ansible.builtin.set_fact:
     portainer_edition: ce
   when: portainer_license is not defined
+  check_mode: false
 
 - name: Template a docker-compose file
   ansible.builtin.template:

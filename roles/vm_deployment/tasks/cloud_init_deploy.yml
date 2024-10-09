@@ -9,6 +9,7 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
   register: vm_create_result
+  check_mode: false
 
 - name: Download and configure latest Debian Bookworm cloud image
   when: vm_create_result.status != 200
@@ -26,6 +27,7 @@
         owner: root
         group: root
         mode: '0644'
+      check_mode: false
 
     - name: Install virt-customize
       ansible.builtin.apt:

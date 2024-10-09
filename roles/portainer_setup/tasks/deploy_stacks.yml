@@ -11,6 +11,7 @@
       Username: "{{ portainer_username }}"
       Password: "{{ portainer_password }}"
   register: auth_token
+  check_mode: false
 
 - name: Add path to each volume's corresponding config file
   ansible.builtin.set_fact:
@@ -39,6 +40,7 @@
     headers:
       Authorization: "Bearer {{ (auth_token.content | from_json).jwt }}"
   register: existing_stacks_response
+  check_mode: false
 
 - name: Deploy all absent stacks (except Portainer)
   ansible.builtin.uri:

@@ -9,6 +9,7 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
   register: portainer_exist_result
+  check_mode: false
 
 - name: Clone a cloud-init VM if portainer VM does not exist
   when: portainer_exist_result.status != 200

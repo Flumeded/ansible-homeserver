@@ -9,6 +9,7 @@
       Cookie: PVEAuthCookie={{ (proxmox_ticket.content | from_json).data.ticket }}
       CSRFPreventionToken: "{{ (proxmox_ticket.content | from_json).data.CSRFPreventionToken }}"
   register: lxc_exist_result
+  check_mode: false
 
 - name: Download and deploy a Debian LXC container
   when: lxc_exist_result.status != 200
@@ -20,6 +21,7 @@
             (lookup('url', 'http://download.proxmox.com/images/system/')
             | regex_findall('debian-[0-9]+-standard_[0-9.]+-[0-9]+_amd64')) | sort | last
           }}
+      check_mode: false
 
     - name: Download {{ latest_debian_image }}
       ansible.builtin.get_url:
