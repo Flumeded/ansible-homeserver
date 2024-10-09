@@ -32,7 +32,7 @@ To deploy this setup, follow the steps below:
 
 1. **Install Dependencies:**
     ```bash
-    ansible-galaxy install -r requirements.yml
+    ansible-galaxy install -r roles/requirements.yml
     ```
 
 2. **Customize Inventory and Variables:**
