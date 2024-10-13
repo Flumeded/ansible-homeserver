@@ -1,0 +1,6 @@
+#########################
+### SMB Configuration ###
+#########################
+
+samba_username: share-user
+samba_group: share_group

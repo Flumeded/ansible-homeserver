@@ -18,8 +18,8 @@
       ansible.builtin.get_url:
         url: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
         # Fishing out the checksum from the checksum list
-        # To mitigate fork() issues on MacOS you might need \
-        # to run `export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
+        # To mitigate fork() issues on MacOS you might need to run
+        # `export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
         checksum: >
           sha512:{{ lookup('url', 'https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS')
           | regex_search('([a-f0-9]+)\s+debian-12-generic-amd64\.qcow2', '\1') }}
@@ -70,8 +70,8 @@
           protection: '{{ vm_protection | default(1) }}'
           # https://github.com/ansible/ansible/issues/73054
           # https://github.com/pallets/jinja/issues/515
-          # Now I need to cross "Encounter 2 bugs while doing something simple in Ansible" \
-          # from my Bingo card
+          # Now I need to cross "Encounter 2 bugs while doing something simple in Ansible"
+          # From my Bingo card
           sshkeys: '{{ "{}".format(cloud_init_ssh_key) | urlencode | replace("/", "%2F") }}'
           ciuser: '{{ created_username }}'
           cipassword: '{{ created_username_password }}'

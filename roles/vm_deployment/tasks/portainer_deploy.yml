@@ -64,7 +64,7 @@
           memory: '6000'
           onboot: '1'
           protection: '{{ vm_protection | default(1) }}'
-          ipconfig0: "gw={{ network_gateway }},ip={{ hostvars['portainer']['ansible_host'] }}/24"
+          ipconfig0: "gw={{ subnet }}.31,ip={{ portainer_ip }}/24"
 
     - name: Configure VM disk
       ansible.builtin.uri:

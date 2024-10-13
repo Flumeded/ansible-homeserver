@@ -9,7 +9,7 @@
   notify: Restart Samba Service
 
 - name: Remove [homes] section
-# Removing homes section so share would not consist \
+# Removing homes section so share would not consist
 # Out of two folders: user's and configured share
   community.general.ini_file:
     path: /etc/samba/smb.conf

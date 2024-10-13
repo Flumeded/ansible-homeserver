@@ -1,0 +1,6 @@
+ui_color: "light" # Sets light theme in Portainer in test env
+portainer_edition: ce # Sets Portainer to Community Edition
+portainer_endpoint_name: "test"
+share_size: "10" # Reduces share size in test env
+vm_protection: "0" # Disable VM protection for easy VM deletion
+# kvm_enabled: "0" # Uncomment this if you are running on a nested Hypervisor

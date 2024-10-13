@@ -1,0 +1,6 @@
+#########################
+### SSH Configuration ###
+#########################
+
+ansible_ssh_common_args: '-o ControlMaster=auto -o ControlPersist=60s -o UserKnownHostsFile=/dev/null'
+host_key_checking: false

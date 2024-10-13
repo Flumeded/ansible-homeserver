@@ -56,7 +56,7 @@
     headers:
       Authorization: Bearer {{ (auth_token.content | from_json).jwt }}
     body:
-      Name: '{{ portainer_endpoint_name }}'
+      Name: '{{ portainer_endpoint_name | default("production") }}'
       EndpointCreationType: '1'
       GroupID: '1'
       PublicURL: "{{ portainer_ip }}"
@@ -200,8 +200,8 @@
   check_mode: false
 
 - name: Remove existing token to recreate it again
-  # We either need to store the key as artifact on playbook success or \
-  # we can simple recreate one every time, doing latter
+  # We either need to store the key as artifact on playbook success or
+  # We can simple recreate one every time, doing latter
   ansible.builtin.uri:
     url: "https://{{ portainer_ip }}:9443/api/users/{{ homepage_user.json.Id }}/tokens/{{ existing_tokens_response.json[0].id }}"
     method: DELETE

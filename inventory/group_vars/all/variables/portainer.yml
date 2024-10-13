@@ -1,0 +1,13 @@
+###############################
+### Portainer Configuration ###
+###############################
+
+portainer_endpoint_id: "1"
+
+### Docker Variables ###
+timezone: TZ=Asia/Yerevan
+# Those can be left empty 
+# They are going to be replaced with defaults
+homeassistant_api_key:
+portainer_api_key:
+technitium_api_key:

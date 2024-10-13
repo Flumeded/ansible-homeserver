@@ -55,7 +55,7 @@
           mp0: 'volume=local-lvm:{{ share_size | default("100") }},mp=/mnt/share'
           cores: '1'
           # TODO: Implement more robust {{ subet }} variable, now I'm declaring it manually
-          net0: "name=eth0,bridge=vmbr0,gw={{ samba_ip | regex_replace('\\.[0-9]+$', '') }}.1,ip={{ samba_ip }}/24"
+          net0: "name=eth0,bridge=vmbr0,gw={{ smb_ip | regex_replace('\\.[0-9]+$', '') }}.1,ip={{ smb_ip }}/24"
           onboot: '1'
           protection: '{{ vm_protection | default(1) }}'
           unprivileged: '1'

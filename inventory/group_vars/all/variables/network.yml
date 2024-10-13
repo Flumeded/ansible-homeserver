@@ -1,0 +1,8 @@
+#############################
+### Network Configuration ###
+#############################
+
+proxmox_ip: "{{ hostvars['proxmox']['ansible_host'] }}"
+portainer_ip: "{{ hostvars['portainer']['ansible_host'] }}"
+smb_ip: "{{ hostvars['samba']['ansible_host'] }}"
+subnet: "{{ ansible_default_ipv4.network | regex_replace('([0-9]+)$', '') }}"

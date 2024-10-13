@@ -1,7 +1,7 @@
 - name: Remove proxmox nag pop-up with a script
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/no-nag-script
-    # Taken from: \
+    # Taken from:
     # https://github.com/tteck/Proxmox/raw/main/misc/post-pve-install.sh
     content: >
       DPkg::Post-Invoke { "dpkg -V proxmox-widget-toolkit | grep -q '/proxmoxlib\.js$';

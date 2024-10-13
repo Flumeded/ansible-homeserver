@@ -3,7 +3,7 @@ services:
     image: cloudflare/cloudflared 
     container_name: cloudflared
     restart: unless-stopped 
-    command: tunnel run {{ cloudflared_tunnel }}
+    command: tunnel run {{ tunnel_name }}
     environment:
       - TZ={{ timezone }}
     volumes:

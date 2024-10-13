@@ -1,0 +1,23 @@
+##########################
+### VM Deployment Vars ###
+##########################
+
+### Proxmox Configuration ###
+proxmox_node: orfen
+
+### Cloud Init VM configuration ###
+cloud_init_vm_name: debian-cloud
+cloud_init_vm_id: "700"
+
+### Portainer VM configuration ###
+portainer_vm_id: 200
+portainer_vm_name: Giran
+
+### Home Assistant VM configuration ###
+haos_vm_id: "250"
+haos_vm_name: "HAOS"
+usb0_device: "host=10c4:ea60"
+usb1_device: "host=2357:0604"
+
+### Samba LXC configuration ###
+samba_lxc_id: "210"
