@@ -56,3 +56,7 @@ To deploy this setup, follow the steps below:
 * **Idempotency:** The playbook is idempotent, meaning you can run it multiple times without causing any harm or redeploying existing resources.
 * **Portainer Role:** Portainer checks for missing containers and dynamically deploys them. Note that changes to the Docker Compose files will not trigger redeployment, but volume contents will be updated if necessary.
 * **Dry run**: `--check` can be utilized after all VMs has been deployed.
+
+## Architecture
+
+![Network-Diagram](./assets/network-setup.svg)

@@ -1,3 +1,4 @@
 .vscode
 .ansible-lint-ignore
 .ansible-lint
+.DS_Store
